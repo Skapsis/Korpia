@@ -1,40 +1,70 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database/db');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { PrismaClient } = require('@prisma/client');
 
-// Basic Login Endpoint
-router.post('/login', (req, res) => {
+const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || 'solvex-secret-dev-key';
+
+// POST /api/auth/login
+router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-        return res.status(400).json({ success: false, message: 'Email and password are required' });
+        return res.status(400).json({ success: false, message: 'Email y contraseña requeridos.' });
     }
 
-    db.get("SELECT id, name, email, role FROM users WHERE email = ? AND password = ?", [email, password], (err, row) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ success: false, message: 'Database error' });
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email },
+            include: { company: true }
+        });
+
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'Credenciales inválidas.' });
         }
 
-        if (row) {
-            // Update last login
-            db.run("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?", [row.id]);
-
-            // In a real app we'd return a JWT token here.
-            res.json({
-                success: true,
-                user: {
-                    id: row.id,
-                    name: row.name,
-                    email: row.email,
-                    role: row.role
-                },
-                token: 'mock-jwt-token-val-' + row.id
-            });
-        } else {
-            res.status(401).json({ success: false, message: 'Invalid credentials' });
+        const isValid = await bcrypt.compare(password, user.password);
+        if (!isValid) {
+            return res.status(401).json({ success: false, message: 'Credenciales inválidas.' });
         }
-    });
+
+        const token = jwt.sign(
+            { userId: user.id, companyId: user.companyId, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '8h' }
+        );
+
+        res.json({
+            success: true,
+            token,
+            user: { id: user.id, name: user.name, email: user.email, role: user.role, company: user.company }
+        });
+    } catch (error) {
+        console.error('Auth error:', error);
+        res.status(500).json({ success: false, message: 'Error del servidor.' });
+    }
+});
+
+// GET /api/auth/me (validate token)
+router.get('/me', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ success: false, message: 'Token requerido.' });
+    }
+
+    try {
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = await prisma.user.findUnique({
+            where: { id: decoded.userId },
+            include: { company: true }
+        });
+        res.json({ success: true, user });
+    } catch {
+        res.status(401).json({ success: false, message: 'Token inválido.' });
+    }
 });
 
 module.exports = router;

@@ -1,0 +1,77 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  users          User[]
+  commercialKPIs CommercialKPI[]
+  operationKPIs  OperationKPI[]
+  qualityKPIs    QualityKPI[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("viewer")
+  createdAt DateTime @default(now())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+}
+
+model CommercialKPI {
+  id             String   @id @default(cuid())
+  period         String   // e.g. "2025-Q1", "2025-02"
+  potenciales    Int      @default(0)
+  presupuestos   Int      @default(0)
+  monto          Float    @default(0)
+  cumplimiento   Float    @default(0) // percentage
+  createdAt      DateTime @default(now())
+  uploadedAt     DateTime @default(now())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+}
+
+model OperationKPI {
+  id                   String   @id @default(cuid())
+  period               String
+  tiempoEfectivo       Float    @default(0) // percentage
+  ordenesProgramadas   Int      @default(0)
+  ordenesEjecutadas    Int      @default(0)
+  cancelaciones        Int      @default(0)
+  createdAt            DateTime @default(now())
+  uploadedAt           DateTime @default(now())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+}
+
+model QualityKPI {
+  id                    String   @id @default(cuid())
+  period                String
+  nps                   Float    @default(0)
+  cancelacionesTecnicas Int      @default(0)
+  deficiencias          Int      @default(0)
+  satisfaccion          Float    @default(0) // percentage
+  createdAt             DateTime @default(now())
+  uploadedAt            DateTime @default(now())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+}
