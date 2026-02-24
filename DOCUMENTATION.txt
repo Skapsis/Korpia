@@ -1,0 +1,56 @@
+SOLVEX Analytics - Documentation
+================================
+
+Introduction
+------------
+SOLVEX Analytics has been transformed from a static HTML prototype into a dynamic web application powered by Node.js and SQLite. The platform features a customized dashboard experience, a central login system, and a flexible SQL Lab for data exploration.
+
+Architecture
+------------
+- Backend: Node.js with Express.
+- Database: SQLite (local file: src/database/database.sqlite).
+- Frontend: HTML5, Tailwind CSS (via CDN), and Vanilla JavaScript.
+
+Features
+--------
+1. Authenticacion:
+   - Login system with persistent session (LocalStorage).
+   - Default user: admin@solvex.com / admin123.
+   
+2. Dynamic Dashboards:
+   - The 'Commercial' dashboard is connected to the backend API.
+   - Data is fetched via POST requests to /api/query using dynamic SQL.
+
+3. SQL Lab (Metabase-style):
+   - A dedicated interface to run custom SQL queries against the internal SQLite database.
+   - Provides table schema exploration and real-time result rendering.
+
+4. Database Schema:
+   - `users`: Stores user credentials and roles.
+   - `commercial_sales`: Mock sales data (date, revenue, region, category).
+   - `operations_metrics`: Mock operations data (efficiency, department, downtime).
+
+Setup & Execution
+-----------------
+To run the server locally:
+1. Ensure Node.js is installed.
+2. Open a terminal in the project root.
+3. Install dependencies (if not already done):
+   `npm install`
+4. Start the server:
+   `node server.js`
+5. Access the portal at:
+   `http://localhost:3000`
+
+API Endpoints
+-------------
+- POST /api/auth/login: Validates credentials.
+- POST /api/query: Executes a SQL string and returns JSON results.
+- GET  /api/query/schema: Returns a list of available tables.
+
+Maintenance
+-----------
+The database is automatically seeded with sample data on first run if tables are empty. To reset data, delete the `src/database/database.sqlite` file and restart the server.
+
+================================
+© 2024 SOLVEX Technologies

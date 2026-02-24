@@ -1,0 +1,351 @@
+<!-- SOLVEX Analytics - Operations Dashboard -->
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SOLVEX Analytics - Operations Dashboard</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0d33f2",
+                        "primary-dark": "#0a26b5",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#101322",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        sans: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+</head>
+
+<script>
+    if (!localStorage.getItem('solvex_token')) {
+        window.location.href = '/login.html';
+    }
+</script>
+
+<body class="bg-background-light text-slate-900 font-display antialiased overflow-hidden">
+    <div class="flex h-screen w-full overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="flex w-64 flex-col border-r border-slate-200 bg-white h-full shrink-0 z-20">
+            <div class="flex items-center gap-3 px-6 py-6 border-b border-slate-100">
+                <div
+                    class="flex items-center justify-center bg-primary size-10 rounded-xl text-white shadow-lg shadow-primary/20">
+                    <span class="material-symbols-outlined text-2xl">analytics</span>
+                </div>
+                <div class="flex flex-col">
+                    <h1 class="text-slate-900 text-lg font-bold leading-none tracking-tight">SOLVEX</h1>
+                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1 opacity-70">Analytics
+                    </p>
+                </div>
+            </div>
+
+            <nav class="flex-1 flex flex-col gap-1 px-4 py-6 overflow-y-auto hide-scrollbar">
+                <div class="px-2 pb-2">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Main Menu</p>
+                </div>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                    href="commercial.html">
+                    <span class="material-symbols-outlined text-[20px]">dashboard</span>
+                    <span class="text-sm font-medium">Dashboard</span>
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                    href="sql-lab.html">
+                    <span class="material-symbols-outlined text-[20px]">database</span>
+                    <span class="text-sm font-medium">SQL Lab</span>
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                    href="reports.html">
+                    <span class="material-symbols-outlined text-[20px]">description</span>
+                    <span class="text-sm font-medium">Reports</span>
+                </a>
+                <div class="my-4 border-t border-slate-50"></div>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                    href="user-management.html">
+                    <span class="material-symbols-outlined text-[20px]">group</span>
+                    <span class="text-sm font-medium">Users</span>
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                    href="platform-config.html">
+                    <span class="material-symbols-outlined text-[20px]">settings</span>
+                    <span class="text-sm font-medium">Settings</span>
+                </a>
+            </nav>
+
+            <div class="p-4 border-t border-slate-100 bg-slate-50/50">
+                <button onclick="logout()"
+                    class="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-red-500 hover:bg-red-50 transition-all">
+                    <span class="material-symbols-outlined text-lg">logout</span>
+                    Cerrar Sesión
+                </button>
+            </div>
+        </aside>
+        <script>
+            function logout() {
+                localStorage.removeItem('solvex_token');
+                localStorage.removeItem('solvex_user');
+                window.location.href = '/login.html';
+            }
+        </script>
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto bg-background-light p-6 lg:p-8">
+            <!-- Header (Simplified) -->
+            <div class="mb-8 border-b border-slate-200 pb-5">
+                <div class="flex items-center gap-2 text-slate-500 text-xs font-medium mb-1">
+                    <span>Home</span>
+                    <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                    <span class="text-primary">Operations</span>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Panel de Operaciones</h2>
+            </div>
+            <main class="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark p-6 lg:p-8">
+                <div class="max-w-7xl mx-auto space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Operaciones</h1>
+                            <p class="text-slate-500 text-sm">Monitoreo de rendimiento operativo en tiempo real</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button
+                                class="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                                <span class="material-symbols-outlined text-lg">calendar_today</span>
+                                Este mes
+                            </button>
+                            <button
+                                class="flex items-center gap-2 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark shadow-sm shadow-primary/30 transition-colors">
+                                <span class="material-symbols-outlined text-lg">download</span>
+                                Exportar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div
+                            class="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 relative overflow-hidden group hover:border-primary/30 transition-colors">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Tiempo Efectivo de
+                                        Trabajo</p>
+                                    <h3 class="text-3xl font-bold text-slate-900 dark:text-white mt-1">71%</h3>
+                                </div>
+                                <div
+                                    class="p-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-lg">
+                                    <span class="material-symbols-outlined">warning</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 mt-4">
+                                <div class="flex-1 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                    <div class="h-full bg-orange-500 w-[71%] rounded-full"></div>
+                                </div>
+                                <span class="text-xs font-semibold text-orange-600 dark:text-orange-400">Meta:
+                                    80%</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-2">Bajo rendimiento detectado en Línea 3</p>
+                        </div>
+                        <div
+                            class="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 relative overflow-hidden group hover:border-primary/30 transition-colors">
+                            <div class="flex flex-col h-full justify-between">
+                                <div class="flex justify-between items-start">
+                                    <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Órdenes: Prog. vs
+                                        Ejec.</p>
+                                    <div
+                                        class="p-2 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg">
+                                        <span class="material-symbols-outlined">assignment</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between mt-2">
+                                    <div class="relative size-24">
+                                        <svg class="size-full -rotate-90" viewBox="0 0 36 36"
+                                            xmlns="http://www.w3.org/2000/svg">
+                                            <path class="text-slate-100 dark:text-slate-800"
+                                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                                fill="none" stroke="currentColor" stroke-dasharray="100, 100"
+                                                stroke-width="4"></path>
+                                            <path class="text-primary"
+                                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                                fill="none" stroke="currentColor" stroke-dasharray="90, 100"
+                                                stroke-linecap="round" stroke-width="4"></path>
+                                        </svg>
+                                        <div
+                                            class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                                            <span class="text-sm font-bold text-slate-900 dark:text-white">90%</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="mb-2">
+                                            <span class="block text-xs text-slate-400">Ejecutadas</span>
+                                            <span class="text-xl font-bold text-slate-900 dark:text-white">145</span>
+                                        </div>
+                                        <div>
+                                            <span class="block text-xs text-slate-400">Programadas</span>
+                                            <span class="text-sm font-semibold text-slate-500">/ 160</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div
+                            class="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 relative overflow-hidden group hover:border-primary/30 transition-colors">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Tasa de
+                                        Cancelación
+                                    </p>
+                                    <div class="flex items-baseline gap-2 mt-1">
+                                        <h3 class="text-3xl font-bold text-red-600">3.2%</h3>
+                                        <span
+                                            class="text-xs font-medium text-red-500 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[14px]">arrow_upward</span>
+                                            0.5%
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="p-2 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg animate-pulse">
+                                    <span class="material-symbols-outlined">notifications_active</span>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="text-slate-500">Meta Máxima</span>
+                                    <span class="font-medium text-slate-700 dark:text-slate-300">2.5%</span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm mt-1">
+                                    <span class="text-slate-500">Semana Anterior</span>
+                                    <span class="font-medium text-slate-700 dark:text-slate-300">2.7%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        class="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Rendimiento Operativo
+                                    Diario
+                                </h3>
+                                <p class="text-sm text-slate-500">Fluctuaciones de eficiencia en los últimos 7 días</p>
+                            </div>
+                            <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                                <button
+                                    class="px-3 py-1 text-xs font-medium bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded shadow-sm">Semana</button>
+                                <button
+                                    class="px-3 py-1 text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">Mes</button>
+                            </div>
+                        </div>
+                        <div class="relative h-64 w-full mt-4">
+                            <div class="absolute inset-0 flex flex-col justify-between text-xs text-slate-400">
+                                <div
+                                    class="border-b border-slate-100 dark:border-slate-800 w-full h-0 flex items-center">
+                                    <span>100%</span>
+                                </div>
+                                <div
+                                    class="border-b border-slate-100 dark:border-slate-800 w-full h-0 flex items-center">
+                                    <span>75%</span>
+                                </div>
+                                <div
+                                    class="border-b border-slate-100 dark:border-slate-800 w-full h-0 flex items-center">
+                                    <span>50%</span>
+                                </div>
+                                <div
+                                    class="border-b border-slate-100 dark:border-slate-800 w-full h-0 flex items-center">
+                                    <span>25%</span>
+                                </div>
+                                <div
+                                    class="border-b border-slate-100 dark:border-slate-800 w-full h-0 flex items-center">
+                                    <span>0%</span>
+                                </div>
+                            </div>
+                            <div
+                                class="absolute inset-0 flex items-end justify-between pl-8 pr-4 pb-6 pt-2 gap-2 sm:gap-4">
+                                <div class="flex flex-col items-center flex-1 h-full justify-end group">
+                                    <div
+                                        class="w-full max-w-[40px] bg-primary/20 rounded-t-sm h-[65%] relative group-hover:bg-primary/30 transition-all">
+                                        <div
+                                            class="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded">
+                                            65%</div>
+                                    </div>
+                                    <span class="text-xs text-slate-500 mt-2">Lun</span>
+                                </div>
+                                <div class="flex flex-col items-center flex-1 h-full justify-end group">
+                                    <div
+                                        class="w-full max-w-[40px] bg-primary/40 rounded-t-sm h-[72%] relative group-hover:bg-primary/50 transition-all">
+                                        <div
+                                            class="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded">
+                                            72%</div>
+                                    </div>
+                                    <span class="text-xs text-slate-500 mt-2">Mar</span>
+                                </div>
+                                <div class="flex flex-col items-center flex-1 h-full justify-end group">
+                                    <div
+                                        class="w-full max-w-[40px] bg-primary/60 rounded-t-sm h-[82%] relative group-hover:bg-primary/70 transition-all">
+                                        <div
+                                            class="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded">
+                                            82%</div>
+                                    </div>
+                                    <span class="text-xs text-slate-500 mt-2">Mié</span>
+                                </div>
+                                <div class="flex flex-col items-center flex-1 h-full justify-end group">
+                                    <div
+                                        class="w-full max-w-[40px] bg-primary/50 rounded-t-sm h-[78%] relative group-hover:bg-primary/60 transition-all">
+                                        <div
+                                            class="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded">
+                                            78%</div>
+                                    </div>
+                                    <span class="text-xs text-slate-500 mt-2">Jue</span>
+                                </div>
+                                <div class="flex flex-col items-center flex-1 h-full justify-end group">
+                                    <div
+                                        class="w-full max-w-[40px] bg-orange-400 rounded-t-sm h-[71%] relative group-hover:bg-orange-500 transition-all">
+                                        <div
+                                            class="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded">
+                                            71%</div>
+                                    </div>
+                                    <span class="text-xs text-slate-500 mt-2 font-bold text-orange-600">Vie</span>
+                                </div>
+                                <div class="flex flex-col items-center flex-1 h-full justify-end group">
+                                    <div
+                                        class="w-full max-w-[40px] bg-primary/30 rounded-t-sm h-[45%] relative group-hover:bg-primary/40 transition-all">
+                                        <div
+                                            class="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded">
+                                            45%</div>
+                                    </div>
+                                    <span class="text-xs text-slate-500 mt-2">Sáb</span>
+                                </div>
+                                <div class="flex flex-col items-center flex-1 h-full justify-end group">
+                                    <div
+                                        class="w-full max-w-[40px] bg-primary/20 rounded-t-sm h-[30%] relative group-hover:bg-primary/30 transition-all">
+                                        <div
+                                            class="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded">
+                                            30%</div>
+                                    </div>
+                                    <span class="text-xs text-slate-500 mt-2">Dom</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+    </div>
+</body>
+
+</html>

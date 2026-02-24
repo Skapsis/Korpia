@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SOLVEX Analytics - Welcome</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0d33f2",
+                        "background-light": "#f8f9fc",
+                        "text-main": "#0d101c",
+                        "text-secondary": "#49579c",
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-background-light text-text-main min-h-screen">
+    <script>
+        if (!localStorage.getItem('solvex_token')) {
+            window.location.href = '/login.html';
+        }
+    </script>
+
+    <div class="max-w-6xl mx-auto px-6 py-12">
+        <header class="flex items-center justify-between mb-12">
+            <div class="flex items-center gap-3">
+                <div
+                    class="bg-primary size-12 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-primary/20">
+                    <span class="material-symbols-outlined text-3xl">analytics</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">SOLVEX <span class="text-primary">Analytics</span>
+                    </h1>
+                    <p class="text-sm font-medium text-text-secondary">Enterprise Quality Insights</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="logout()"
+                    class="text-sm font-bold text-red-500 hover:bg-red-50 px-4 py-2 rounded-xl transition-all">Cerrar
+                    Sesión</button>
+                <div class="size-10 rounded-full bg-slate-200 border-2 border-white shadow-sm"></div>
+            </div>
+        </header>
+
+        <main>
+            <div class="mb-12">
+                <h2 class="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">Hola, <span
+                        id="welcome-name">Admin</span></h2>
+                <p class="text-slate-500 text-lg font-medium">¿Qué quieres analizar hoy?</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Commercial Card -->
+                <a href="commercial.html"
+                    class="group bg-white p-8 rounded-3xl shadow-sm border border-slate-100 hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 transform hover:-translate-y-2">
+                    <div
+                        class="bg-blue-50 size-14 rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
+                        <span class="material-symbols-outlined text-3xl">bar_chart</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Comercial</h3>
+                    <p class="text-slate-500 text-sm leading-relaxed mb-6">Analiza ventas, ingresos y metas comerciales
+                        en tiempo real.</p>
+                    <div class="flex items-center text-primary font-bold text-sm">
+                        Abrir Tablero <span
+                            class="material-symbols-outlined ml-2 transition-transform group-hover:translate-x-1">arrow_forward</span>
+                    </div>
+                </a>
+
+                <!-- SQL Lab Card -->
+                <a href="sql-lab.html"
+                    class="group bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-800 hover:shadow-2xl hover:shadow-white/5 transition-all duration-300 transform hover:-translate-y-2">
+                    <div
+                        class="bg-white/10 size-14 rounded-2xl flex items-center justify-center text-white mb-6 group-hover:bg-white group-hover:text-slate-900 transition-colors">
+                        <span class="material-symbols-outlined text-3xl">database</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">SQL Lab</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-6">Ejecuta consultas personalizadas y explora la
+                        base de datos tipo Metabase.</p>
+                    <div class="flex items-center text-white font-bold text-sm">
+                        Explorar Datos <span
+                            class="material-symbols-outlined ml-2 transition-transform group-hover:translate-x-1">arrow_forward</span>
+                    </div>
+                </a>
+
+                <!-- Reports Card -->
+                <a href="reports.html"
+                    class="group bg-white p-8 rounded-3xl shadow-sm border border-slate-100 hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 transform hover:-translate-y-2">
+                    <div
+                        class="bg-indigo-50 size-14 rounded-2xl flex items-center justify-center text-indigo-600 mb-6 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                        <span class="material-symbols-outlined text-3xl">description</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Reportes</h3>
+                    <p class="text-slate-500 text-sm leading-relaxed mb-6">Genera documentos y análisis detallados de
+                        calidad y operaciones.</p>
+                    <div class="flex items-center text-indigo-600 font-bold text-sm">
+                        Ver Reportes <span
+                            class="material-symbols-outlined ml-2 transition-transform group-hover:translate-x-1">arrow_forward</span>
+                    </div>
+                </a>
+            </div>
+
+            <div class="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div
+                    class="bg-indigo-600 rounded-[2.5rem] p-10 text-white relative overflow-hidden flex flex-col justify-end min-h-[300px] shadow-2xl shadow-indigo-200">
+                    <div
+                        class="absolute top-0 right-0 p-10 opacity-20 transform translate-x-10 -translate-y-10 scale-150">
+                        <span class="material-symbols-outlined text-[200px]">settings</span>
+                    </div>
+                    <div class="relative z-10">
+                        <h3 class="text-3xl font-bold mb-2">Configuración</h3>
+                        <p class="text-indigo-100 mb-6 max-w-sm">Gestiona usuarios, permisos y parámetros globales del
+                            sistema.</p>
+                        <a href="platform-config.html"
+                            class="inline-flex bg-white text-indigo-600 font-bold px-6 py-3 rounded-xl hover:bg-slate-50 transition-colors">Ir
+                            a Ajustes</a>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm relative overflow-hidden flex flex-col justify-end min-h-[300px]">
+                    <div class="absolute top-0 right-0 p-10 opacity-5">
+                        <span class="material-symbols-outlined text-[200px]">group</span>
+                    </div>
+                    <div class="relative z-10">
+                        <h3 class="text-3xl font-bold mb-2 text-slate-900">Usuarios</h3>
+                        <p class="text-slate-500 mb-6 max-w-sm">Controla el acceso de tu equipo al panel de control.</p>
+                        <a href="user-management.html"
+                            class="inline-flex bg-slate-900 text-white font-bold px-6 py-3 rounded-xl hover:bg-slate-800 transition-colors">Gestionar
+                            Equipo</a>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="mt-20 pt-10 border-t border-slate-100 text-center">
+            <p class="text-slate-400 text-sm font-medium">&copy; 2024 SOLVEX Analytics Dashboard. Built for Enterprise
+                Quality.</p>
+        </footer>
+    </div>
+
+    <script>
+        const user = JSON.parse(localStorage.getItem('solvex_user'));
+        if (user) document.getElementById('welcome-name').textContent = user.name.split(' ')[0];
+
+        function logout() {
+            localStorage.removeItem('solvex_token');
+            localStorage.removeItem('solvex_user');
+            window.location.href = '/login.html';
+        }
+    </script>
+</body>
+
+</html>

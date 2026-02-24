@@ -1,0 +1,394 @@
+<!-- SOLVEX Analytics - Platform Configuration -->
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SOLVEX Analytics - Platform Configuration</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0d33f2",
+                        "primary-light": "#eef2ff",
+                        "background-light": "#f8f9fc",
+                        "background-dark": "#101322",
+                        "text-main": "#0d101c",
+                        "text-secondary": "#49579c",
+                        "border-color": "#e7e9f4",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                        lg: "1rem",
+                        xl: "1.5rem",
+                        full: "9999px",
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+
+<script>
+    if (!localStorage.getItem('solvex_token')) {
+        window.location.href = '/login.html';
+    }
+</script>
+
+<body class="bg-background-light text-text-main antialiased h-screen overflow-hidden flex">
+    <!-- Sidebar -->
+    <aside class="flex w-64 flex-col border-r border-slate-200 bg-white h-full shrink-0 z-20 transition-all">
+        <div class="flex items-center gap-3 px-6 py-6 border-b border-slate-100">
+            <div
+                class="flex items-center justify-center bg-primary size-10 rounded-xl text-white shadow-lg shadow-primary/20">
+                <span class="material-symbols-outlined text-2xl">analytics</span>
+            </div>
+            <div class="flex flex-col">
+                <h1 class="text-slate-900 text-lg font-bold leading-none tracking-tight">SOLVEX</h1>
+                <p class="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1 opacity-70">Analytics</p>
+            </div>
+        </div>
+
+        <nav class="flex-1 flex flex-col gap-1 px-4 py-6 overflow-y-auto">
+            <div class="px-2 pb-2">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Main Menu</p>
+            </div>
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                href="commercial.html">
+                <span class="material-symbols-outlined text-[20px]">dashboard</span>
+                <span class="text-sm font-medium">Dashboard</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                href="sql-lab.html">
+                <span class="material-symbols-outlined text-[20px]">database</span>
+                <span class="text-sm font-medium">SQL Lab</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                href="reports.html">
+                <span class="material-symbols-outlined text-[20px]">description</span>
+                <span class="text-sm font-medium">Reports</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                href="operations.html">
+                <span class="material-symbols-outlined text-[20px]">factory</span>
+                <span class="text-sm font-medium">Operations</span>
+            </a>
+            <div class="my-4 border-t border-slate-50"></div>
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                href="user-management.html">
+                <span class="material-symbols-outlined text-[20px]">group</span>
+                <span class="text-sm font-medium">Users</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-primary/10 text-primary group transition-all"
+                href="platform-config.html">
+                <span class="material-symbols-outlined text-[20px]">settings</span>
+                <span class="text-sm font-semibold">Settings</span>
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-slate-100 bg-slate-50/50">
+            <button onclick="logout()"
+                class="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-red-500 hover:bg-red-50 transition-all">
+                Cerrar Sesión
+            </button>
+        </div>
+    </aside>
+    <script>
+        function logout() {
+            localStorage.removeItem('solvex_token');
+            localStorage.removeItem('solvex_user');
+            window.location.href = '/login.html';
+        }
+    </script>
+    <!-- Main Content Space -->
+    <div class="flex flex-1 flex-col overflow-hidden">
+        <!-- Top Header -->
+        <header class="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-8 shrink-0 z-10">
+            <div class="flex items-center gap-3 text-gray-500">
+                <span class="text-sm font-medium">Platform</span>
+                <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+                <span class="text-sm font-semibold text-text-main">Global Settings</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="relative hidden md:block w-64">
+                    <span
+                        class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">search</span>
+                    <input
+                        class="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        placeholder="Search settings..." type="text" />
+                    <span
+                        class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">⌘K</span>
+                </div>
+                <button
+                    class="relative p-2 text-gray-400 hover:text-text-main hover:bg-gray-50 rounded-lg transition-colors">
+                    <span class="material-symbols-outlined text-[22px]">notifications</span>
+                    <span class="absolute top-1.5 right-1.5 size-2 bg-red-500 rounded-full ring-2 ring-white"></span>
+                </button>
+            </div>
+        </header>
+        <!-- Scrollable Settings Container -->
+        <main class="flex-1 overflow-y-auto bg-background-light p-4 md:p-8">
+            <div class="mx-auto max-w-5xl">
+                <!-- Page Title -->
+                <div class="mb-8">
+                    <h1 class="text-2xl font-bold text-text-main tracking-tight">Platform Configuration</h1>
+                    <p class="text-text-secondary mt-1">Manage global settings, integrations, and display preferences
+                        for your workspace.</p>
+                </div>
+                <!-- Settings Layout Grid -->
+                <div class="flex flex-col lg:flex-row gap-8 items-start">
+                    <!-- Left Sidebar Navigation for Settings -->
+                    <div class="w-full lg:w-64 shrink-0 flex flex-col gap-1 sticky top-0">
+                        <button
+                            class="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-white shadow-sm border border-gray-200 text-primary font-medium w-full text-left transition-all">
+                            <span class="material-symbols-outlined text-[20px]">tune</span>
+                            <span class="text-sm">General</span>
+                        </button>
+                        <button
+                            class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-text-secondary hover:bg-gray-100 hover:text-text-main w-full text-left font-medium transition-all">
+                            <span class="material-symbols-outlined text-[20px]">palette</span>
+                            <span class="text-sm">Appearance</span>
+                        </button>
+                        <button
+                            class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-text-secondary hover:bg-gray-100 hover:text-text-main w-full text-left font-medium transition-all">
+                            <span class="material-symbols-outlined text-[20px]">cable</span>
+                            <span class="text-sm">Integrations</span>
+                            <span
+                                class="ml-auto bg-primary/10 text-primary text-[10px] uppercase font-bold px-1.5 py-0.5 rounded">2
+                                Active</span>
+                        </button>
+                        <button
+                            class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-text-secondary hover:bg-gray-100 hover:text-text-main w-full text-left font-medium transition-all">
+                            <span class="material-symbols-outlined text-[20px]">notifications_active</span>
+                            <span class="text-sm">Notifications</span>
+                        </button>
+                        <button
+                            class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-text-secondary hover:bg-gray-100 hover:text-text-main w-full text-left font-medium transition-all">
+                            <span class="material-symbols-outlined text-[20px]">database</span>
+                            <span class="text-sm">Data &amp; Export</span>
+                        </button>
+                        <button
+                            class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-text-secondary hover:bg-gray-100 hover:text-text-main w-full text-left font-medium transition-all">
+                            <span class="material-symbols-outlined text-[20px]">api</span>
+                            <span class="text-sm">API Keys</span>
+                        </button>
+                    </div>
+                    <!-- Right Content Area -->
+                    <div class="flex-1 w-full space-y-6">
+                        <!-- Section: Workspace Details -->
+                        <section class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-gray-100">
+                                <h2 class="text-lg font-semibold text-text-main">Workspace Details</h2>
+                                <p class="text-sm text-text-secondary">Basic formatting and naming for this workspace.
+                                </p>
+                            </div>
+                            <div class="p-6 space-y-6">
+                                <!-- Form Group -->
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                                    <div class="col-span-1">
+                                        <label class="block text-sm font-medium text-gray-700">Workspace Name</label>
+                                        <p class="text-xs text-gray-500 mt-1">This name will be displayed in the sidebar
+                                            and emails.</p>
+                                    </div>
+                                    <div class="col-span-1 md:col-span-2">
+                                        <input
+                                            class="w-full rounded-lg border-gray-300 bg-white px-3 py-2 text-sm text-text-main focus:border-primary focus:ring-primary/20 shadow-sm"
+                                            type="text" value="SOLVEX Analytics HQ" />
+                                    </div>
+                                </div>
+                                <hr class="border-gray-100" />
+                                <!-- Form Group -->
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                                    <div class="col-span-1">
+                                        <label class="block text-sm font-medium text-gray-700">Company Logo</label>
+                                        <p class="text-xs text-gray-500 mt-1">Update your company logo. Recommended size
+                                            256x256px.</p>
+                                    </div>
+                                    <div class="col-span-1 md:col-span-2 flex items-center gap-4">
+                                        <div
+                                            class="size-16 rounded-xl bg-primary flex items-center justify-center text-white shrink-0 border border-gray-100 shadow-sm">
+                                            <span class="material-symbols-outlined text-3xl">analytics</span>
+                                        </div>
+                                        <button
+                                            class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors shadow-sm">
+                                            Change Logo
+                                        </button>
+                                        <button
+                                            class="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                            Remove
+                                        </button>
+                                    </div>
+                                </div>
+                                <hr class="border-gray-100" />
+                                <!-- Form Group -->
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                                    <div class="col-span-1">
+                                        <label class="block text-sm font-medium text-gray-700">Timezone &amp;
+                                            Locale</label>
+                                        <p class="text-xs text-gray-500 mt-1">Set how dates and numbers are formatted
+                                            globally.</p>
+                                    </div>
+                                    <div class="col-span-1 md:col-span-2 space-y-3">
+                                        <select
+                                            class="w-full rounded-lg border-gray-300 bg-white px-3 py-2 text-sm text-text-main focus:border-primary focus:ring-primary/20 shadow-sm">
+                                            <option>(GMT-05:00) Eastern Time (US &amp; Canada)</option>
+                                            <option>(GMT-06:00) Central Time (US &amp; Canada)</option>
+                                            <option>(GMT-08:00) Pacific Time (US &amp; Canada)</option>
+                                            <option>(GMT+01:00) Central European Time</option>
+                                        </select>
+                                        <div class="flex gap-3">
+                                            <select
+                                                class="w-1/2 rounded-lg border-gray-300 bg-white px-3 py-2 text-sm text-text-main focus:border-primary focus:ring-primary/20 shadow-sm">
+                                                <option>English (US)</option>
+                                                <option selected="">Spanish (Latin America)</option>
+                                            </select>
+                                            <select
+                                                class="w-1/2 rounded-lg border-gray-300 bg-white px-3 py-2 text-sm text-text-main focus:border-primary focus:ring-primary/20 shadow-sm">
+                                                <option value="USD">USD ($)</option>
+                                                <option value="EUR">EUR (€)</option>
+                                                <option value="MXN">MXN ($)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                        <!-- Section: Features & Preferences -->
+                        <section class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-gray-100">
+                                <h2 class="text-lg font-semibold text-text-main">Feature Preferences</h2>
+                                <p class="text-sm text-text-secondary">Toggle beta features and advanced analytics
+                                    modes.</p>
+                            </div>
+                            <div class="p-6 space-y-0 divide-y divide-gray-100">
+                                <!-- Toggle Item 1 -->
+                                <div class="flex items-center justify-between py-4 first:pt-0 last:pb-0">
+                                    <div class="pr-4">
+                                        <h3 class="text-sm font-semibold text-text-main">Advanced Export Formats</h3>
+                                        <p class="text-xs text-gray-500 mt-0.5">Allow users to export dashboard data in
+                                            JSON and raw CSV formats.</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                        <input checked="" class="sr-only peer" type="checkbox" />
+                                        <div
+                                            class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                                        </div>
+                                    </label>
+                                </div>
+                                <!-- Toggle Item 2 -->
+                                <div class="flex items-center justify-between py-4 first:pt-0 last:pb-0">
+                                    <div class="pr-4">
+                                        <div class="flex items-center gap-2">
+                                            <h3 class="text-sm font-semibold text-text-main">Predictive AI Insights</h3>
+                                            <span
+                                                class="bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">BETA</span>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-0.5">Enable machine learning models to
+                                            forecast trends on the Commercial dashboard.</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                        <input checked="" class="sr-only peer" type="checkbox" />
+                                        <div
+                                            class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                                        </div>
+                                    </label>
+                                </div>
+                                <!-- Toggle Item 3 -->
+                                <div class="flex items-center justify-between py-4 first:pt-0 last:pb-0">
+                                    <div class="pr-4">
+                                        <h3 class="text-sm font-semibold text-text-main">Strict Data Anonymization</h3>
+                                        <p class="text-xs text-gray-500 mt-0.5">Mask PII (Personally Identifiable
+                                            Information) in all standard reports for viewers.</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                        <input class="sr-only peer" type="checkbox" />
+                                        <div
+                                            class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </section>
+                        <!-- Section: Danger Zone -->
+                        <section
+                            class="bg-white rounded-xl border border-red-200 shadow-sm overflow-hidden mt-8 relative before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-red-500">
+                            <div class="p-6">
+                                <h2 class="text-lg font-semibold text-red-700 mb-1">Danger Zone</h2>
+                                <p class="text-sm text-gray-600 mb-4">Irreversible actions regarding your workspace
+                                    data.</p>
+                                <div
+                                    class="flex items-center justify-between bg-red-50/50 p-4 rounded-lg border border-red-100">
+                                    <div>
+                                        <h3 class="text-sm font-semibold text-text-main">Delete Workspace Data Cache
+                                        </h3>
+                                        <p class="text-xs text-text-secondary mt-0.5">Clear all temporary reporting
+                                            data. May cause slower initial load times.</p>
+                                    </div>
+                                    <button
+                                        class="px-4 py-2 border border-red-200 rounded-lg text-sm font-medium text-red-600 bg-white hover:bg-red-50 hover:border-red-300 transition-colors shadow-sm whitespace-nowrap">
+                                        Clear Cache
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+                        <!-- Save Actions Bar -->
+                        <div
+                            class="flex items-center justify-end gap-3 pt-6 pb-12 opacity-80 hover:opacity-100 transition-opacity">
+                            <button
+                                class="px-5 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:bg-gray-100 transition-colors">
+                                Cancel
+                            </button>
+                            <button
+                                class="px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold shadow-sm hover:bg-blue-700 hover:shadow transition-all flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[18px]">save</span>
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

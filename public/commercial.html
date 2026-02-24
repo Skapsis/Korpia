@@ -1,0 +1,459 @@
+<!-- SOLVEX Analytics Dashboard - Commercial Tab -->
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SOLVEX Analytics Dashboard</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d33f2",
+                        "primary-dark": "#0a25b0",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#101322",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "2xl": "2rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+
+<script>
+    if (!localStorage.getItem('solvex_token')) {
+        window.location.href = '/login.html';
+    }
+</script>
+
+<body class="bg-background-light text-slate-900 font-display antialiased overflow-hidden">
+    <div class="flex h-screen w-full overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="flex w-64 flex-col border-r border-slate-200 bg-white h-full shrink-0 z-20">
+            <!-- Logo Section -->
+            <div class="flex items-center gap-3 px-6 py-6 border-b border-slate-100">
+                <div
+                    class="flex items-center justify-center bg-primary size-10 rounded-xl text-white shadow-lg shadow-primary/20">
+                    <span class="material-symbols-outlined text-2xl">analytics</span>
+                </div>
+                <div class="flex flex-col">
+                    <h1 class="text-slate-900 text-lg font-bold leading-none tracking-tight">SOLVEX</h1>
+                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1 opacity-70">Analytics
+                    </p>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 flex flex-col gap-1 px-4 py-6 overflow-y-auto hide-scrollbar">
+                <div class="px-2 pb-2">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Main Menu</p>
+                </div>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-primary/10 text-primary group transition-all"
+                    href="commercial.html">
+                    <span class="material-symbols-outlined text-[20px]">dashboard</span>
+                    <span class="text-sm font-semibold">Dashboard</span>
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                    href="sql-lab.html">
+                    <span class="material-symbols-outlined text-[20px]">database</span>
+                    <span class="text-sm font-medium">SQL Lab</span>
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                    href="reports.html">
+                    <span class="material-symbols-outlined text-[20px]">description</span>
+                    <span class="text-sm font-medium">Reports</span>
+                </a>
+                <div class="my-4 border-t border-slate-50"></div>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                    href="user-management.html">
+                    <span class="material-symbols-outlined text-[20px]">group</span>
+                    <span class="text-sm font-medium">Users</span>
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                    href="platform-config.html">
+                    <span class="material-symbols-outlined text-[20px]">settings</span>
+                    <span class="text-sm font-medium">Settings</span>
+                </a>
+            </nav>
+
+            <!-- User Profile & Logout -->
+            <div class="p-4 border-t border-slate-100 bg-slate-50/50">
+                <div class="flex items-center gap-3 px-2 mb-4">
+                    <div
+                        class="size-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs border border-primary/10">
+                        AD</div>
+                    <div class="flex flex-col overflow-hidden">
+                        <p id="user-display-name" class="text-sm font-bold text-slate-900 truncate">Admin User</p>
+                        <p class="text-[10px] font-medium text-slate-500 truncate">Administrator</p>
+                    </div>
+                </div>
+                <button onclick="logout()"
+                    class="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-red-500 hover:bg-red-50 hover:border-red-100 transition-all active:scale-[0.98]">
+                    <span class="material-symbols-outlined text-lg">logout</span>
+                    Cerrar Sesión
+                </button>
+            </div>
+        </aside>
+
+        <script>
+            function logout() {
+                localStorage.removeItem('solvex_token');
+                localStorage.removeItem('solvex_user');
+                window.location.href = '/login.html';
+            }
+            const user = JSON.parse(localStorage.getItem('solvex_user'));
+            if (user) document.getElementById('user-display-name').textContent = user.name;
+        </script>
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col h-full bg-background-light overflow-hidden relative">
+            <!-- Header -->
+            <header
+                class="flex items-center justify-between px-8 py-5 bg-white border-b border-slate-200 shadow-sm shrink-0 z-10">
+                <div class="flex flex-col gap-1">
+                    <div class="flex items-center gap-2 text-slate-500 text-xs font-medium">
+                        <span>Home</span>
+                        <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                        <span>Dashboard</span>
+                        <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                        <span class="text-primary">Comercial</span>
+                    </div>
+                    <h2 class="text-slate-900 text-2xl font-bold tracking-tight">Panel de Control - Empresa: SOLVEX</h2>
+                </div>
+                <div class="flex items-center gap-4">
+                    <!-- Date Picker Mock -->
+                    <button
+                        class="flex items-center gap-2 bg-slate-50 border border-slate-200 hover:bg-white hover:border-slate-300 text-slate-700 px-4 py-2 rounded-lg transition-all shadow-sm">
+                        <span class="material-symbols-outlined text-slate-500 text-lg">calendar_month</span>
+                        <span class="text-sm font-semibold">Febrero 2024</span>
+                        <span class="material-symbols-outlined text-slate-400 text-lg">expand_more</span>
+                    </button>
+                    <!-- Notifications -->
+                    <button class="relative p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors">
+                        <span class="material-symbols-outlined">notifications</span>
+                        <span
+                            class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white"></span>
+                    </button>
+                </div>
+            </header>
+            <!-- Scrollable Content Area -->
+            <div class="flex-1 overflow-y-auto p-8">
+                <div class="max-w-7xl mx-auto flex flex-col gap-8">
+                    <!-- Tabs -->
+                    <div class="border-b border-slate-200">
+                        <nav aria-label="Tabs" class="-mb-px flex space-x-8">
+                            <a class="border-primary text-primary whitespace-nowrap border-b-[3px] py-4 px-1 text-sm font-bold flex items-center gap-2"
+                                href="#">
+                                <span class="material-symbols-outlined text-lg">paid</span>
+                                Comercial
+                            </a>
+                            <a class="border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700 whitespace-nowrap border-b-[3px] py-4 px-1 text-sm font-medium flex items-center gap-2"
+                                href="operations.html">
+                                <span class="material-symbols-outlined text-lg">engineering</span>
+                                Operaciones
+                            </a>
+                            <a class="border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700 whitespace-nowrap border-b-[3px] py-4 px-1 text-sm font-medium flex items-center gap-2"
+                                href="technical-quality.html">
+                                <span class="material-symbols-outlined text-lg">verified</span>
+                                Calidad Técnica
+                            </a>
+                            <a class="border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700 whitespace-nowrap border-b-[3px] py-4 px-1 text-sm font-medium flex items-center gap-2"
+                                href="consolidated.html">
+                                <span class="material-symbols-outlined text-lg">pie_chart</span>
+                                Consolidado
+                            </a>
+                        </nav>
+                    </div>
+                    <!-- KPI Cards Row -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- KPI Card 1 -->
+                        <div
+                            class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 relative overflow-hidden group hover:shadow-md transition-shadow">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex flex-col gap-1">
+                                    <p class="text-slate-500 text-sm font-medium">Nuevos Potenciales</p>
+                                    <div class="flex items-baseline gap-2">
+                                        <h3 id="kpi-potenciales" class="text-3xl font-bold text-slate-900">...</h3>
+                                        <span class="text-sm font-medium text-slate-400">vs Meta</span>
+                                    </div>
+                                </div>
+                                <span
+                                    class="bg-green-50 text-green-600 rounded-lg p-2 material-symbols-outlined">trending_up</span>
+                            </div>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span
+                                    class="flex items-center text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                                    <span class="material-symbols-outlined text-sm mr-1">arrow_upward</span>
+                                    <span id="kpi-potenciales-trend">...</span>
+                                </span>
+                                <span class="text-xs text-slate-400">vs mes anterior</span>
+                            </div>
+                            <!-- Decorative background gradient -->
+                            <div
+                                class="absolute -right-6 -bottom-6 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none group-hover:bg-primary/10 transition-colors">
+                            </div>
+                        </div>
+                        <!-- KPI Card 2 -->
+                        <div
+                            class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 relative overflow-hidden group hover:shadow-md transition-shadow">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex flex-col gap-1">
+                                    <p class="text-slate-500 text-sm font-medium">Presupuestos Creados</p>
+                                    <div class="flex items-baseline gap-2">
+                                        <h3 id="kpi-presupuestos" class="text-3xl font-bold text-slate-900">...</h3>
+                                    </div>
+                                </div>
+                                <span
+                                    class="bg-primary/10 text-primary rounded-lg p-2 material-symbols-outlined">assignment</span>
+                            </div>
+                            <div class="mt-4 flex flex-col gap-2">
+                                <div class="flex justify-between text-xs font-medium text-slate-500">
+                                    <span>Progreso</span>
+                                    <span id="kpi-presupuestos-progress-text">...</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                                    <div id="kpi-presupuestos-progress-bar" class="bg-primary h-2.5 rounded-full"
+                                        style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <!-- Decorative background gradient -->
+                            <div
+                                class="absolute -right-6 -bottom-6 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none group-hover:bg-primary/10 transition-colors">
+                            </div>
+                        </div>
+                        <!-- KPI Card 3 -->
+                        <div
+                            class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 relative overflow-hidden group hover:shadow-md transition-shadow">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex flex-col gap-1">
+                                    <p class="text-slate-500 text-sm font-medium">Valor de Presupuestos</p>
+                                    <div class="flex items-baseline gap-2">
+                                        <h3 id="kpi-valor" class="text-3xl font-bold text-slate-900">...</h3>
+                                    </div>
+                                    <span class="text-sm text-slate-400">Meta: $200M</span>
+                                </div>
+                                <span
+                                    class="bg-orange-50 text-orange-600 rounded-lg p-2 material-symbols-outlined">monetization_on</span>
+                            </div>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span
+                                    class="flex items-center text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+                                    <span class="material-symbols-outlined text-sm mr-1">arrow_downward</span>
+                                    15%
+                                </span>
+                                <span class="text-xs text-slate-400">Debajo del objetivo</span>
+                            </div>
+                            <!-- Decorative background gradient -->
+                            <div
+                                class="absolute -right-6 -bottom-6 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-orange-500/10 transition-colors">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Charts Row -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full pb-6">
+                        <!-- Main Bar Chart -->
+                        <div
+                            class="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col h-[400px]">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-slate-900 font-bold text-lg">Evolución de Presupuestos por Semana</h3>
+                                <button class="text-slate-400 hover:text-primary transition-colors">
+                                    <span class="material-symbols-outlined">more_horiz</span>
+                                </button>
+                            </div>
+                            <!-- Pure CSS Bar Chart Representation -->
+                            <div class="flex-1 flex items-end justify-between gap-4 px-4 relative">
+                                <!-- Grid Lines -->
+                                <div
+                                    class="absolute inset-0 flex flex-col justify-between pointer-events-none pb-8 pr-4">
+                                    <div class="w-full h-px bg-slate-100 border-t border-dashed border-slate-200"></div>
+                                    <div class="w-full h-px bg-slate-100 border-t border-dashed border-slate-200"></div>
+                                    <div class="w-full h-px bg-slate-100 border-t border-dashed border-slate-200"></div>
+                                    <div class="w-full h-px bg-slate-100 border-t border-dashed border-slate-200"></div>
+                                    <div class="w-full h-px bg-slate-200"></div>
+                                </div>
+                                <!-- Bars -->
+                                <div
+                                    class="flex-1 flex flex-col items-center justify-end h-full z-10 group cursor-pointer">
+                                    <div
+                                        class="w-full bg-primary/10 rounded-t-lg h-[40%] relative group-hover:bg-primary/20 transition-all duration-300">
+                                        <div
+                                            class="absolute bottom-0 w-full bg-primary rounded-t-lg h-[70%] group-hover:bg-primary-dark transition-all duration-300">
+                                        </div>
+                                        <!-- Tooltip -->
+                                        <div
+                                            class="opacity-0 group-hover:opacity-100 absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs py-1 px-2 rounded pointer-events-none transition-opacity">
+                                            $24M
+                                        </div>
+                                    </div>
+                                    <span class="text-xs font-medium text-slate-500 mt-3">Semana 1</span>
+                                </div>
+                                <div
+                                    class="flex-1 flex flex-col items-center justify-end h-full z-10 group cursor-pointer">
+                                    <div
+                                        class="w-full bg-primary/10 rounded-t-lg h-[65%] relative group-hover:bg-primary/20 transition-all duration-300">
+                                        <div
+                                            class="absolute bottom-0 w-full bg-primary rounded-t-lg h-[85%] group-hover:bg-primary-dark transition-all duration-300">
+                                        </div>
+                                        <!-- Tooltip -->
+                                        <div
+                                            class="opacity-0 group-hover:opacity-100 absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs py-1 px-2 rounded pointer-events-none transition-opacity">
+                                            $42M
+                                        </div>
+                                    </div>
+                                    <span class="text-xs font-medium text-slate-500 mt-3">Semana 2</span>
+                                </div>
+                                <div
+                                    class="flex-1 flex flex-col items-center justify-end h-full z-10 group cursor-pointer">
+                                    <div
+                                        class="w-full bg-primary/10 rounded-t-lg h-[50%] relative group-hover:bg-primary/20 transition-all duration-300">
+                                        <div
+                                            class="absolute bottom-0 w-full bg-primary rounded-t-lg h-[60%] group-hover:bg-primary-dark transition-all duration-300">
+                                        </div>
+                                        <!-- Tooltip -->
+                                        <div
+                                            class="opacity-0 group-hover:opacity-100 absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs py-1 px-2 rounded pointer-events-none transition-opacity">
+                                            $30M
+                                        </div>
+                                    </div>
+                                    <span class="text-xs font-medium text-slate-500 mt-3">Semana 3</span>
+                                </div>
+                                <div
+                                    class="flex-1 flex flex-col items-center justify-end h-full z-10 group cursor-pointer">
+                                    <div
+                                        class="w-full bg-primary/10 rounded-t-lg h-[80%] relative group-hover:bg-primary/20 transition-all duration-300">
+                                        <div
+                                            class="absolute bottom-0 w-full bg-primary rounded-t-lg h-[40%] group-hover:bg-primary-dark transition-all duration-300">
+                                        </div>
+                                        <!-- Tooltip -->
+                                        <div
+                                            class="opacity-0 group-hover:opacity-100 absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs py-1 px-2 rounded pointer-events-none transition-opacity">
+                                            $38M
+                                        </div>
+                                    </div>
+                                    <span class="text-xs font-medium text-slate-500 mt-3">Semana 4</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Secondary Doughnut Chart -->
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col h-[400px]">
+                            <h3 class="text-slate-900 font-bold text-lg mb-6">Tasa de Cumplimiento</h3>
+                            <div class="flex-1 flex items-center justify-center relative">
+                                <!-- CSS Conic Gradient for Doughnut Chart -->
+                                <div class="size-48 rounded-full relative bg-slate-100"
+                                    style="background: conic-gradient(#0d33f2 0% 65%, #e2e8f0 65% 100%);">
+                                    <!-- Inner White Circle -->
+                                    <div
+                                        class="absolute inset-4 bg-white rounded-full flex flex-col items-center justify-center">
+                                        <span class="text-3xl font-bold text-slate-900">65%</span>
+                                        <span class="text-xs font-medium text-slate-500">Total</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 space-y-3">
+                                <div
+                                    class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="size-3 rounded-full bg-primary"></div>
+                                        <span class="text-sm font-medium text-slate-600">Completado</span>
+                                    </div>
+                                    <span class="text-sm font-bold text-slate-900">65%</span>
+                                </div>
+                                <div
+                                    class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="size-3 rounded-full bg-slate-200"></div>
+                                        <span class="text-sm font-medium text-slate-600">Pendiente</span>
+                                    </div>
+                                    <span class="text-sm font-bold text-slate-900">35%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        async function loadDashboardData() {
+            try {
+                // Fetch KPIs from SQL backend
+                const revenueQuery = "SELECT SUM(revenue) as total FROM commercial_sales";
+                const countQuery = "SELECT COUNT(*) as count FROM commercial_sales";
+
+                const [revRes, countRes] = await Promise.all([
+                    fetch('/api/query', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: revenueQuery })
+                    }).then(r => r.json()),
+                    fetch('/api/query', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: countQuery })
+                    }).then(r => r.json())
+                ]);
+
+                if (revRes.success && revRes.data.length > 0) {
+                    const total = revRes.data[0].total || 0;
+                    document.getElementById('kpi-valor').textContent = '$' + (total / 1000000).toFixed(1) + 'M';
+                }
+
+                if (countRes.success && countRes.data.length > 0) {
+                    const count = countRes.data[0].count || 0;
+                    const meta = 80;
+                    document.getElementById('kpi-presupuestos').innerHTML = `${count} <span class="text-lg text-slate-400 font-normal">/ ${meta}</span>`;
+
+                    const progress = Math.min((count / meta) * 100, 100);
+                    document.getElementById('kpi-presupuestos-progress-text').textContent = progress.toFixed(1) + '%';
+                    document.getElementById('kpi-presupuestos-progress-bar').style.width = progress + '%';
+                }
+
+                // Mocking trending potentials for visual
+                document.getElementById('kpi-potenciales').textContent = '92%';
+                document.getElementById('kpi-potenciales-trend').textContent = '3.8%';
+
+            } catch (err) {
+                console.error("Error loading dashboard data", err);
+            }
+        }
+
+        loadDashboardData();
+    </script>
+</body>
+
+</html>

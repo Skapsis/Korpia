@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SOLVEX Analytics - Login</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0d33f2",
+                        "primary-dark": "#0a26b5",
+                        "background-light": "#f8f9fc",
+                        "text-main": "#0d101c",
+                        "text-secondary": "#49579c",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        sans: ["Inter", "sans-serif"],
+                    },
+                    animation: {
+                        "fade-in-up": "fadeInUp 0.6s ease-out forwards",
+                        "blob": "blob 7s infinite",
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            "0%": { opacity: "0", transform: "translateY(20px)" },
+                            "100%": { opacity: "1", transform: "translateY(0)" },
+                        },
+                        blob: {
+                            "0%": { transform: "translate(0px, 0px) scale(1)" },
+                            "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+                            "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+                            "100%": { transform: "translate(0px, 0px) scale(1)" },
+                        }
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+        }
+    </style>
+</head>
+
+<body class="bg-background-light font-display min-h-screen relative overflow-hidden flex items-center justify-center">
+
+    <!-- Ambient Background Elements -->
+    <div
+        class="absolute top-0 -left-64 w-96 h-96 bg-primary/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob">
+    </div>
+    <div class="absolute top-0 -right-4 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"
+        style="animation-delay: 2s;"></div>
+    <div class="absolute -bottom-32 left-1/2 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"
+        style="animation-delay: 4s;"></div>
+
+    <div class="w-full max-w-md px-6 relative z-10 animate-fade-in-up">
+        <!-- Logo Header -->
+        <div class="text-center mb-8">
+            <div
+                class="bg-gradient-to-br from-primary to-indigo-800 size-16 rounded-2xl mx-auto flex items-center justify-center text-white shadow-xl shadow-primary/30 mb-4 transform hover:scale-105 transition-transform">
+                <span class="material-symbols-outlined text-4xl">analytics</span>
+            </div>
+            <h1 class="text-3xl font-bold text-text-main tracking-tight">Welcome Back</h1>
+            <p class="text-text-secondary mt-2 font-medium">Log in to SOLVEX Analytics</p>
+        </div>
+
+        <!-- Login Form -->
+        <div class="glass-panel p-8 rounded-3xl shadow-2xl shadow-slate-200">
+            <form id="loginForm" class="space-y-6">
+                <div id="errorMsg"
+                    class="hidden bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm font-medium border border-red-100 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[20px]">error</span>
+                    <span id="errorText">Invalid credentials</span>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="email" class="block text-sm font-semibold text-text-main mb-1.5">Email
+                            Address</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                <span class="material-symbols-outlined text-[20px]">mail</span>
+                            </span>
+                            <input type="email" id="email" name="email" required
+                                class="w-full bg-white/50 border border-slate-200 rounded-xl pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+                                placeholder="name@company.com" value="admin@solvex.com">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="password" class="block text-sm font-semibold text-text-main">Password</label>
+                            <a href="#"
+                                class="text-xs font-semibold text-primary hover:text-primary-dark transition-colors">Forgot
+                                password?</a>
+                        </div>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                <span class="material-symbols-outlined text-[20px]">lock</span>
+                            </span>
+                            <input type="password" id="password" name="password" required
+                                class="w-full bg-white/50 border border-slate-200 rounded-xl pl-11 pr-11 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+                                placeholder="••••••••" value="admin123">
+                            <button type="button"
+                                class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                <span class="material-symbols-outlined text-[20px]">visibility_off</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center">
+                    <input type="checkbox" id="remember"
+                        class="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary">
+                    <label for="remember" class="ml-2 text-sm font-medium text-text-secondary">Keep me logged in</label>
+                </div>
+
+                <button type="submit"
+                    class="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                    <span>Sign In</span>
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                </button>
+            </form>
+
+            <div class="mt-8 text-center text-sm font-medium text-text-secondary">
+                Don't have an account? <a href="#"
+                    class="text-primary hover:text-primary-dark transition-colors">Request access</a>
+            </div>
+        </div>
+
+        <div class="mt-8 text-center text-xs text-slate-400">
+            &copy; 2024 SOLVEX Technologies. All rights reserved.
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('errorMsg');
+            const errorText = document.getElementById('errorText');
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    errorMsg.classList.add('hidden');
+                    // Store user data in local storage
+                    localStorage.setItem('solvex_user', JSON.stringify(data.user));
+                    localStorage.setItem('solvex_token', data.token);
+
+                    // Redirect to dashboard
+                    window.location.href = '/index.html';
+                } else {
+                    errorText.textContent = data.message || 'Invalid credentials';
+                    errorMsg.classList.remove('hidden');
+                }
+            } catch (error) {
+                errorText.textContent = 'Server connection failed';
+                errorMsg.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+
+</html>

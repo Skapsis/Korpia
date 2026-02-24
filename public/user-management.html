@@ -1,0 +1,618 @@
+<!-- SOLVEX Analytics - User Management -->
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SOLVEX Analytics - User Management</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0d33f2",
+                        "primary-light": "#eef2ff",
+                        "background-light": "#f8f9fc",
+                        "background-dark": "#101322",
+                        "text-main": "#0d101c",
+                        "text-secondary": "#49579c",
+                        "border-color": "#e7e9f4",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                        lg: "1rem",
+                        xl: "1.5rem",
+                        full: "9999px",
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<script>
+    if (!localStorage.getItem('solvex_token')) {
+        window.location.href = '/login.html';
+    }
+</script>
+
+<body class="bg-background-light text-text-main antialiased">
+    <div class="relative flex h-screen w-full flex-row overflow-hidden bg-background-light">
+        <!-- Sidebar -->
+        <aside class="flex h-full w-64 flex-col border-r border-border-color bg-white shrink-0 z-20 transition-all">
+            <div class="flex items-center gap-3 px-6 py-6 border-b border-slate-100">
+                <div
+                    class="flex items-center justify-center bg-primary size-10 rounded-xl text-white shadow-lg shadow-primary/20">
+                    <span class="material-symbols-outlined text-2xl">analytics</span>
+                </div>
+                <div class="flex flex-col">
+                    <h1 class="text-slate-900 text-lg font-bold leading-none tracking-tight">SOLVEX</h1>
+                    <p class="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1 opacity-70">Analytics
+                    </p>
+                </div>
+            </div>
+
+            <nav class="flex-1 flex flex-col gap-1 px-4 py-6 overflow-y-auto">
+                <div class="px-2 pb-2">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Main Menu</p>
+                </div>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                    href="commercial.html">
+                    <span class="material-symbols-outlined text-[20px]">dashboard</span>
+                    <span class="text-sm font-medium">Dashboard</span>
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                    href="sql-lab.html">
+                    <span class="material-symbols-outlined text-[20px]">database</span>
+                    <span class="text-sm font-medium">SQL Lab</span>
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                    href="reports.html">
+                    <span class="material-symbols-outlined text-[20px]">description</span>
+                    <span class="text-sm font-medium">Reports</span>
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                    href="operations.html">
+                    <span class="material-symbols-outlined text-[20px]">factory</span>
+                    <span class="text-sm font-medium">Operations</span>
+                </a>
+                <div class="my-4 border-t border-slate-50"></div>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-primary/10 text-primary group transition-all"
+                    href="user-management.html">
+                    <span class="material-symbols-outlined text-[20px]">group</span>
+                    <span class="text-sm font-semibold">Users</span>
+                </a>
+                <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary transition-all group"
+                    href="platform-config.html">
+                    <span class="material-symbols-outlined text-[20px]">settings</span>
+                    <span class="text-sm font-medium">Settings</span>
+                </a>
+            </nav>
+
+            <div class="p-4 border-t border-border-color bg-slate-50/50">
+                <button onclick="logout()"
+                    class="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-red-500 hover:bg-red-50 transition-all">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </aside>
+        <script>
+            function logout() {
+                localStorage.removeItem('solvex_token');
+                localStorage.removeItem('solvex_user');
+                window.location.href = '/login.html';
+            }
+        </script>
+        <!-- Main Content -->
+        <div class="flex flex-1 flex-col h-full overflow-hidden">
+            <!-- Header -->
+            <header
+                class="flex items-center justify-between whitespace-nowrap border-b border-border-color bg-white px-8 py-4 shrink-0">
+                <div class="flex items-center gap-4 text-text-main">
+                    <div class="flex items-center justify-center p-2 bg-gray-50 rounded-lg text-gray-400">
+                        <span class="material-symbols-outlined text-[20px]">menu_open</span>
+                    </div>
+                    <h2 class="text-text-main text-lg font-bold leading-tight tracking-[-0.015em]">User Management</h2>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button
+                        class="flex items-center justify-center size-10 rounded-full hover:bg-gray-50 text-text-secondary transition-colors relative">
+                        <span class="material-symbols-outlined text-[20px]">notifications</span>
+                        <span
+                            class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white"></span>
+                    </button>
+                    <button
+                        class="flex items-center justify-center size-10 rounded-full hover:bg-gray-50 text-text-secondary transition-colors">
+                        <span class="material-symbols-outlined text-[20px]">help</span>
+                    </button>
+                    <div class="w-px h-6 bg-gray-200 mx-2"></div>
+                    <div class="flex items-center gap-3 pl-2 cursor-pointer"
+                        onclick="window.location.href='index.html'">
+                        <div class="text-right hidden md:block">
+                            <p class="text-sm font-semibold text-text-main">Admin User</p>
+                            <p class="text-xs text-text-secondary">admin@solvex.com</p>
+                        </div>
+                        <div class="bg-center bg-no-repeat bg-cover rounded-full size-10 ring-2 ring-white shadow-sm"
+                            data-alt="Admin User Profile"
+                            style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCAGDNzaOkit-OBBJCICFM221xeA7t4lGQmwrtfXw6IKBbua-UwiV2IkAw-ZK0WPfbKkTmvpYn8oEcV3pL25Mi62H9CFN8IFSK2Tqk2KTndcoe8rEeHU0dIdYpOYJVGv1l11oU7r5cmTbRifbHGRtUsPqo8Q0AKGMHmg3ryNIXDzY_AUrk5eL49O8EkI07cyFPzU7P9fgZ4yU3EzniSuO0C-Quf7hXcCor8DaYh4O74vvu-DBUWyGgGKMLRKVnfRbMs3mMipS5tquTm");'>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <!-- Scrollable Content -->
+            <main class="flex-1 overflow-y-auto bg-background-light p-8">
+                <div class="mx-auto max-w-[1200px] flex flex-col gap-6">
+                    <!-- Page Header & Actions -->
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                        <div class="flex flex-col gap-2">
+                            <h1 class="text-text-main text-3xl font-bold tracking-tight">Gestión de Usuarios y Accesos
+                            </h1>
+                            <p class="text-text-secondary text-base max-w-2xl">Manage team members, assign roles, and
+                                control access permissions across the organization.</p>
+                        </div>
+                        <div class="flex gap-3 w-full md:w-auto">
+                            <div class="relative flex-1 md:w-64">
+                                <span
+                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">search</span>
+                                <input
+                                    class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:border-primary focus:ring-primary"
+                                    placeholder="Search users..." type="text" />
+                            </div>
+                            <button
+                                class="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold shadow-sm hover:bg-blue-700 transition-colors shrink-0">
+                                <span class="material-symbols-outlined text-[20px]">add</span>
+                                <span>Invitar Usuario</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Filters -->
+                    <div class="flex flex-wrap gap-2 pb-2">
+                        <button
+                            class="px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium border border-transparent">All
+                            Users</button>
+                        <button
+                            class="px-4 py-1.5 rounded-full bg-white text-text-secondary text-sm font-medium border border-gray-200 hover:bg-gray-50">Admins</button>
+                        <button
+                            class="px-4 py-1.5 rounded-full bg-white text-text-secondary text-sm font-medium border border-gray-200 hover:bg-gray-50">Editors</button>
+                        <button
+                            class="px-4 py-1.5 rounded-full bg-white text-text-secondary text-sm font-medium border border-gray-200 hover:bg-gray-50">Viewers</button>
+                    </div>
+                    <!-- Table Card -->
+                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50/50 border-b border-gray-100">
+                                        <th
+                                            class="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider w-[60px]">
+                                            <div class="flex items-center">
+                                                <input
+                                                    class="rounded border-gray-300 text-primary focus:ring-primary size-4"
+                                                    type="checkbox" />
+                                            </div>
+                                        </th>
+                                        <th
+                                            class="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                                            User</th>
+                                        <th
+                                            class="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                                            Role</th>
+                                        <th
+                                            class="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                                            Company Access</th>
+                                        <th
+                                            class="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                                            Status</th>
+                                        <th
+                                            class="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                                            Last Active</th>
+                                        <th
+                                            class="px-6 py-4 text-xs font-semibold text-text-secondary uppercase tracking-wider text-right">
+                                            Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    <!-- Row 1 -->
+                                    <tr class="hover:bg-gray-50 transition-colors group">
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center">
+                                                <input
+                                                    class="rounded border-gray-300 text-primary focus:ring-primary size-4"
+                                                    type="checkbox" />
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center gap-3">
+                                                <div class="size-10 rounded-full bg-cover bg-center shrink-0 border border-gray-100"
+                                                    data-alt="User Avatar" style='background-image: url("");'></div>
+                                                <div class="flex flex-col">
+                                                    <span class="text-sm font-semibold text-text-main">Alex
+                                                        Morgan</span>
+                                                    <span
+                                                        class="text-xs text-text-secondary">alex.morgan@solvex.com</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                                Admin
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex gap-1 flex-wrap">
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">SOLVEX</span>
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">DBS</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span
+                                                class="flex size-2.5 rounded-full bg-green-500 ring-4 ring-green-100"></span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-text-secondary">
+                                            2 mins ago
+                                        </td>
+                                        <td class="px-6 py-4 text-right">
+                                            <div
+                                                class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    class="p-1 text-gray-400 hover:text-primary transition-colors rounded">
+                                                    <span class="material-symbols-outlined text-[20px]">edit</span>
+                                                </button>
+                                                <button
+                                                    class="p-1 text-gray-400 hover:text-red-600 transition-colors rounded">
+                                                    <span class="material-symbols-outlined text-[20px]">delete</span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <!-- Row 2 -->
+                                    <tr class="hover:bg-gray-50 transition-colors group">
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center">
+                                                <input
+                                                    class="rounded border-gray-300 text-primary focus:ring-primary size-4"
+                                                    type="checkbox" />
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center gap-3">
+                                                <div class="size-10 rounded-full bg-cover bg-center shrink-0 border border-gray-100"
+                                                    data-alt="User Avatar" style='background-image: url("");'></div>
+                                                <div class="flex flex-col">
+                                                    <span class="text-sm font-semibold text-text-main">Sarah
+                                                        Jones</span>
+                                                    <span class="text-xs text-text-secondary">sarah.jones@dbs.com</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                                                Editor
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex gap-1 flex-wrap">
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">DBS</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span
+                                                class="flex size-2.5 rounded-full bg-green-500 ring-4 ring-green-100"></span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-text-secondary">
+                                            1 hour ago
+                                        </td>
+                                        <td class="px-6 py-4 text-right">
+                                            <div
+                                                class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    class="p-1 text-gray-400 hover:text-primary transition-colors rounded">
+                                                    <span class="material-symbols-outlined text-[20px]">edit</span>
+                                                </button>
+                                                <button
+                                                    class="p-1 text-gray-400 hover:text-red-600 transition-colors rounded">
+                                                    <span class="material-symbols-outlined text-[20px]">delete</span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <!-- Row 3 -->
+                                    <tr class="hover:bg-gray-50 transition-colors group">
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center">
+                                                <input
+                                                    class="rounded border-gray-300 text-primary focus:ring-primary size-4"
+                                                    type="checkbox" />
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center gap-3">
+                                                <div class="size-10 rounded-full bg-cover bg-center shrink-0 border border-gray-100"
+                                                    data-alt="User Avatar"
+                                                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBfHduWJq51slqGuCE1Wmar2esNQNG43GndGRGZYH0P7BiyTM3s2tAJwT4OrHJU9mW6c5fpyZ2h05i4NIGcq9-j5MuLb9-WZdg-pIyTzRDNZbS8IzJtVDoAMCUQA81Ob2o0e0azYlsNcQmcawUX3sjZ9qQA2gcvKMMWe_B3wholSEPS48H1x7-PUViMC-gP_tM30fwrfn9Mw_69xp2JfDzixFBUYamZGM98Du1ZD1RqGAHSM3kcHjYkly9JsHQ1LEqY4dAhAtFATSFP");'>
+                                                </div>
+                                                <div class="flex flex-col">
+                                                    <span class="text-sm font-semibold text-text-main">Mike Chen</span>
+                                                    <span class="text-xs text-text-secondary">mike.chen@tech.io</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                Viewer
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex gap-1 flex-wrap">
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">SOLVEX</span>
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">TechIO</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="flex size-2.5 rounded-full bg-gray-300"></span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-text-secondary">
+                                            3 hours ago
+                                        </td>
+                                        <td class="px-6 py-4 text-right">
+                                            <div
+                                                class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    class="p-1 text-gray-400 hover:text-primary transition-colors rounded">
+                                                    <span class="material-symbols-outlined text-[20px]">edit</span>
+                                                </button>
+                                                <button
+                                                    class="p-1 text-gray-400 hover:text-red-600 transition-colors rounded">
+                                                    <span class="material-symbols-outlined text-[20px]">delete</span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <!-- Row 4 -->
+                                    <tr class="hover:bg-gray-50 transition-colors group">
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center">
+                                                <input
+                                                    class="rounded border-gray-300 text-primary focus:ring-primary size-4"
+                                                    type="checkbox" />
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center gap-3">
+                                                <div class="size-10 rounded-full bg-cover bg-center shrink-0 border border-gray-100"
+                                                    data-alt="User Avatar"
+                                                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDg9WLItozXECC3bTPA_rFOgKFzMVPrWzC5neGAawePygY8ux-DZsOUzwnHN5eTHgXZJGvVX54Wu1ZKp29gM-rYJFsavn3R4-VxOHdOjUsmKTcH4ylhINvcXbcTibAG-cBRR-hR4lgRI0naVo42lvZniHz7Q1XjU__9RmBOtYf1BGqleC8LoIiYUerczUy-vn7jttLsGoZXxy02LR3HNic6dyEQY_b_vmLmc3xhV9tyXXtvBrIFTnp-JZOE0OzljTkuMDJPKP0vpDWB");'>
+                                                </div>
+                                                <div class="flex flex-col">
+                                                    <span class="text-sm font-semibold text-text-main">Emma
+                                                        Wilson</span>
+                                                    <span
+                                                        class="text-xs text-text-secondary">emma.wilson@corp.net</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                                                Editor
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex gap-1 flex-wrap">
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">DBS</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="flex size-2.5 rounded-full bg-gray-300"></span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-text-secondary">
+                                            1 day ago
+                                        </td>
+                                        <td class="px-6 py-4 text-right">
+                                            <div
+                                                class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    class="p-1 text-gray-400 hover:text-primary transition-colors rounded">
+                                                    <span class="material-symbols-outlined text-[20px]">edit</span>
+                                                </button>
+                                                <button
+                                                    class="p-1 text-gray-400 hover:text-red-600 transition-colors rounded">
+                                                    <span class="material-symbols-outlined text-[20px]">delete</span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <!-- Row 5 -->
+                                    <tr class="hover:bg-gray-50 transition-colors group">
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center">
+                                                <input
+                                                    class="rounded border-gray-300 text-primary focus:ring-primary size-4"
+                                                    type="checkbox" />
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center gap-3">
+                                                <div class="size-10 rounded-full bg-cover bg-center shrink-0 border border-gray-100"
+                                                    data-alt="User Avatar"
+                                                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDqw4GDRPxbJOixbUoqcKpPRAPbbMmphFN4iUa633L7GTcAWntmgrOfdzb5BFCh-W60p6Ni927uJCsolph580vk-vU6VxI8S1wz0X0BIeFNcOHu-Ojst4CSOOdvWXFvAioFgakC89NOhCTOuSqrCA6bMYnJPLBijxRXbte_NettR8_it5sWvwzV2pGV6fOibAjjvLLvuDgPkZLc7ACqI2iWme9hkd-RSkT7OtzUXl2ZHfgOgu37emBtIJjVIQII2U-dOldFVJ66abBr");'>
+                                                </div>
+                                                <div class="flex flex-col">
+                                                    <span class="text-sm font-semibold text-text-main">David Kim</span>
+                                                    <span
+                                                        class="text-xs text-text-secondary">david.kim@solvex.com</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                Viewer
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex gap-1 flex-wrap">
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">SOLVEX</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="flex size-2.5 rounded-full bg-gray-300"></span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-text-secondary">
+                                            2 days ago
+                                        </td>
+                                        <td class="px-6 py-4 text-right">
+                                            <div
+                                                class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    class="p-1 text-gray-400 hover:text-primary transition-colors rounded">
+                                                    <span class="material-symbols-outlined text-[20px]">edit</span>
+                                                </button>
+                                                <button
+                                                    class="p-1 text-gray-400 hover:text-red-600 transition-colors rounded">
+                                                    <span class="material-symbols-outlined text-[20px]">delete</span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <!-- Row 6 -->
+                                    <tr class="hover:bg-gray-50 transition-colors group">
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center">
+                                                <input
+                                                    class="rounded border-gray-300 text-primary focus:ring-primary size-4"
+                                                    type="checkbox" />
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center gap-3">
+                                                <div class="size-10 rounded-full bg-cover bg-center shrink-0 border border-gray-100"
+                                                    data-alt="User Avatar"
+                                                    style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCbfFm1Y5sTYgSLbJrZOadINlHSaTHRAECJ0zRROyv-g5EYdNaerDlWgaic_G8t3lF8IZpOXQj5ltACEdtqW-NI8JruJBThKkha31eiTqMKflR6rtA6NcWe_ziKN4IKPEcpcFQPx6wVoFa7ms7rYSHrtsI2N6z2ckOF_W0hXo6oEtQZoTLKgnvrI6Uy4EwaCdTFqBg7sFZdrSXyJZ3mLv8g8_MxV2EQVxMWoebI8vK4826T2z5twwbt_dxfQTAMe0xiXqP8jk2ZMk4v");'>
+                                                </div>
+                                                <div class="flex flex-col">
+                                                    <span class="text-sm font-semibold text-text-main">Lucia
+                                                        Garcia</span>
+                                                    <span
+                                                        class="text-xs text-text-secondary">lucia.garcia@dbs.com</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                                Admin
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex gap-1 flex-wrap">
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">DBS</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="flex size-2.5 rounded-full bg-gray-300"></span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-text-secondary">
+                                            5 days ago
+                                        </td>
+                                        <td class="px-6 py-4 text-right">
+                                            <div
+                                                class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    class="p-1 text-gray-400 hover:text-primary transition-colors rounded">
+                                                    <span class="material-symbols-outlined text-[20px]">edit</span>
+                                                </button>
+                                                <button
+                                                    class="p-1 text-gray-400 hover:text-red-600 transition-colors rounded">
+                                                    <span class="material-symbols-outlined text-[20px]">delete</span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination -->
+                        <div
+                            class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+                            <div class="flex flex-1 justify-between sm:hidden">
+                                <a class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                    href="#">Previous</a>
+                                <a class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                    href="#">Next</a>
+                            </div>
+                            <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                                <div>
+                                    <p class="text-sm text-text-secondary">
+                                        Showing <span class="font-medium text-text-main">1</span> to <span
+                                            class="font-medium text-text-main">6</span> of <span
+                                            class="font-medium text-text-main">48</span> results
+                                    </p>
+                                </div>
+                                <div>
+                                    <nav aria-label="Pagination"
+                                        class="isolate inline-flex -space-x-px rounded-md shadow-sm">
+                                        <a class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                                            href="#">
+                                            <span class="sr-only">Previous</span>
+                                            <span class="material-symbols-outlined text-[20px]">chevron_left</span>
+                                        </a>
+                                        <a aria-current="page"
+                                            class="relative z-10 inline-flex items-center bg-primary px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                                            href="#">1</a>
+                                        <a class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                                            href="#">2</a>
+                                        <a class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                                            href="#">3</a>
+                                        <span
+                                            class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300 focus:outline-offset-0">...</span>
+                                        <a class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                                            href="#">8</a>
+                                        <a class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                                            href="#">
+                                            <span class="sr-only">Next</span>
+                                            <span class="material-symbols-outlined text-[20px]">chevron_right</span>
+                                        </a>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+</body>
+
+</html>

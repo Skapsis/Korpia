@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SOLVEX Analytics - SQL Lab</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0d33f2",
+                        "background-light": "#f8f9fc",
+                        "text-main": "#0d101c",
+                        "text-secondary": "#49579c",
+                        "border-color": "#e7e9f4",
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .sql-editor {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+
+<body class="bg-background-light text-text-main flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <aside class="w-64 border-r border-border-color bg-white flex flex-col shrink-0">
+        <div class="p-6 flex items-center gap-3">
+            <div class="bg-primary size-9 rounded-lg flex items-center justify-center text-white">
+                <span class="material-symbols-outlined">analytics</span>
+            </div>
+            <span class="font-bold text-lg tracking-tight">SOLVEX</span>
+        </div>
+        <nav class="flex-1 px-4 space-y-1">
+            <a href="index.html"
+                class="flex items-center gap-3 px-3 py-2 rounded-lg text-text-secondary hover:bg-gray-50 hover:text-primary transition-colors">
+                <span class="material-symbols-outlined">home</span>
+                <span class="text-sm font-medium">Overview</span>
+            </a>
+            <a href="commercial.html"
+                class="flex items-center gap-3 px-3 py-2 rounded-lg text-text-secondary hover:bg-gray-50 hover:text-primary transition-colors">
+                <span class="material-symbols-outlined">bar_chart</span>
+                <span class="text-sm font-medium">Dashboards</span>
+            </a>
+            <a href="sql-lab.html" class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary">
+                <span class="material-symbols-outlined">database</span>
+                <span class="text-sm font-semibold">SQL Lab</span>
+            </a>
+            <a href="reports.html"
+                class="flex items-center gap-3 px-3 py-2 rounded-lg text-text-secondary hover:bg-gray-50 hover:text-primary transition-colors">
+                <span class="material-symbols-outlined">description</span>
+                <span class="text-sm font-medium">Reports</span>
+            </a>
+        </nav>
+        <div class="p-4 border-t border-gray-100">
+            <button onclick="logout()"
+                class="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-red-500 hover:bg-red-50 transition-colors">
+                <span class="material-symbols-outlined text-[20px]">logout</span>
+                <span class="text-sm font-medium">Cerrar Sesión</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-16 border-b border-border-color bg-white flex items-center justify-between px-8">
+            <h1 class="font-bold text-xl">SQL Query Lab</h1>
+            <div class="flex items-center gap-4">
+                <span id="userName" class="text-sm font-medium text-text-secondary">Admin</span>
+                <div class="size-8 bg-gray-200 rounded-full"></div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-hidden p-6 flex flex-col gap-6">
+            <!-- Table List & Schema -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 flex-1 overflow-hidden">
+                <div
+                    class="md:col-span-1 bg-white rounded-xl border border-border-color p-4 flex flex-col gap-4 overflow-hidden">
+                    <h2 class="font-semibold text-sm uppercase tracking-wider text-gray-500">Database Schema</h2>
+                    <div id="schemaList" class="flex-1 overflow-y-auto space-y-2">
+                        <!-- Tables will be loaded here -->
+                        <div class="animate-pulse flex flex-col gap-2">
+                            <div class="h-4 bg-gray-100 rounded w-3/4"></div>
+                            <div class="h-4 bg-gray-100 rounded w-1/2"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Query Editor -->
+                <div class="md:col-span-3 flex flex-col gap-6 overflow-hidden">
+                    <div class="bg-white rounded-xl border border-border-color overflow-hidden flex flex-col">
+                        <div
+                            class="px-4 py-2 border-b border-border-color bg-gray-50 flex items-center justify-between">
+                            <span class="text-xs font-bold text-gray-500 uppercase">Input SQL Query</span>
+                            <button onclick="runQuery()"
+                                class="bg-primary text-white text-sm font-semibold px-4 py-1.5 rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2 shadow-sm">
+                                <span class="material-symbols-outlined text-[18px]">play_arrow</span>
+                                Run Query
+                            </button>
+                        </div>
+                        <textarea id="sqlInput"
+                            class="sql-editor w-full h-48 p-4 text-sm focus:outline-none resize-none"
+                            placeholder="SELECT * FROM commercial_sales LIMIT 10;"></textarea>
+                    </div>
+
+                    <!-- Results Table -->
+                    <div class="bg-white rounded-xl border border-border-color flex-1 overflow-hidden flex flex-col">
+                        <div
+                            class="px-4 py-2 border-b border-border-color bg-gray-50 flex items-center justify-between">
+                            <span class="text-xs font-bold text-gray-500 uppercase">Results</span>
+                            <span id="rowCount" class="text-xs text-gray-400">0 rows</span>
+                        </div>
+                        <div id="resultsTableContainer" class="flex-1 overflow-auto p-0">
+                            <div class="flex items-center justify-center h-full text-gray-400 text-sm italic">
+                                Run a query to see results
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        if (!localStorage.getItem('solvex_token')) {
+            window.location.href = '/login.html';
+        }
+
+        const userName = JSON.parse(localStorage.getItem('solvex_user'))?.name || 'Admin';
+        document.getElementById('userName').textContent = userName;
+
+        async function fetchSchema() {
+            try {
+                const response = await fetch('/api/query/schema');
+                const data = await response.json();
+                if (data.success) {
+                    const list = document.getElementById('schemaList');
+                    list.innerHTML = '';
+                    data.tables.forEach(table => {
+                        const div = document.createElement('div');
+                        div.className = 'flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg cursor-pointer group shadow-sm border border-transparent hover:border-gray-100';
+                        div.innerHTML = `
+                            <span class="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors">table_chart</span>
+                            <span class="text-sm font-medium text-text-secondary group-hover:text-text-main">${table}</span>
+                        `;
+                        div.onclick = () => {
+                            document.getElementById('sqlInput').value = `SELECT * FROM ${table} LIMIT 20;`;
+                        };
+                        list.appendChild(div);
+                    });
+                }
+            } catch (err) {
+                console.error("Error fetching schema", err);
+            }
+        }
+
+        async function runQuery() {
+            const query = document.getElementById('sqlInput').value;
+            if (!query.trim()) return;
+
+            const container = document.getElementById('resultsTableContainer');
+            container.innerHTML = '<div class="flex items-center justify-center h-full"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>';
+
+            try {
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    renderResults(data.data || []);
+                    document.getElementById('rowCount').textContent = `${data.data?.length || 0} rows`;
+                } else {
+                    container.innerHTML = `<div class="p-6 text-red-500 font-medium bg-red-50 border border-red-100 m-4 rounded-xl flex items-start gap-2">
+                        <span class="material-symbols-outlined">error</span>
+                        <div>
+                            <div class="font-bold">Query Error</div>
+                            <div class="text-sm opacity-80 mt-1">${data.message}</div>
+                        </div>
+                    </div>`;
+                }
+            } catch (err) {
+                container.innerHTML = `<div class="p-4 text-red-500">Error connecting to server.</div>`;
+            }
+        }
+
+        function renderResults(data) {
+            const container = document.getElementById('resultsTableContainer');
+            if (data.length === 0) {
+                container.innerHTML = '<div class="p-8 text-center text-gray-400 italic">Query executed successfully but returned no results.</div>';
+                return;
+            }
+
+            const columns = Object.keys(data[0]);
+            let html = `<table class="w-full text-left text-sm border-collapse">
+                <thead class="bg-gray-50 sticky top-0 border-b border-border-color shadow-sm">
+                    <tr>
+                        ${columns.map(col => `<th class="px-4 py-3 font-semibold text-text-secondary uppercase tracking-wider text-[11px] border-r border-border-color last:border-0">${col}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    ${data.map(row => `
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            ${columns.map(col => `<td class="px-4 py-3 text-text-main border-r border-gray-50 last:border-0">${row[col] !== null ? row[col] : '<span class="text-gray-300">null</span>'}</td>`).join('')}
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>`;
+            container.innerHTML = html;
+        }
+
+        function logout() {
+            localStorage.removeItem('solvex_token');
+            localStorage.removeItem('solvex_user');
+            window.location.href = '/login.html';
+        }
+
+        fetchSchema();
+    </script>
+</body>
+
+</html>
