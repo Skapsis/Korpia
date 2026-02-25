@@ -12,3 +12,12 @@ yarn-error.log*
 *.pcap
 
 /src/generated/prisma
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+prisma/*.db
+prisma/*.db-shm
+prisma/*.db-wal
+dev.db

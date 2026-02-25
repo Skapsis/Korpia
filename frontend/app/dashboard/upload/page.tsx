@@ -2,8 +2,9 @@
 
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { uploadCSV, downloadTemplate } from '@/lib/queries';
+import { useAuth } from '@/lib/useAuth';
 import toast from 'react-hot-toast';
 
 const COMPANY_OPTIONS = [
@@ -18,14 +19,19 @@ const TYPE_OPTIONS = [
 ];
 
 export default function UploadPage() {
-    const [companySlug, setCompanySlug] = useState('solvex');
+    const { companySlug: defaultSlug } = useAuth();
+    const queryClient = useQueryClient();
+    const [companySlug, setCompanySlug] = useState(defaultSlug || 'solvex');
     const [type, setType] = useState('commercial');
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
     const mutation = useMutation({
         mutationFn: () => uploadCSV(uploadedFile!, companySlug, type),
         onSuccess: (data) => {
-            toast.success(data.message || 'Datos cargados correctamente.');
+            const label = COMPANY_OPTIONS.find(c => c.value === companySlug)?.label || companySlug.toUpperCase();
+            toast.success(data.message || `Datos de ${label} actualizados correctamente.`);
+            // Invalidate the KPI cache so dashboard re-fetches
+            queryClient.invalidateQueries({ queryKey: ['kpis', companySlug] });
             setUploadedFile(null);
         },
         onError: (err: any) => {

@@ -23,6 +23,20 @@ export async function getCompanies() {
     return res.data;
 }
 
+// KPI Mutations
+export interface CommercialKPIPayload {
+    period: string;
+    potenciales: number;
+    presupuestos: number;
+    monto: number;
+    cumplimiento: number;
+}
+
+export async function createCommercialKPI(companySlug: string, payload: CommercialKPIPayload) {
+    const res = await api.post(`/api/kpis/${companySlug}/commercial`, payload);
+    return res.data;
+}
+
 // CSV Upload
 export async function uploadCSV(file: File, companySlug: string, type: string) {
     const formData = new FormData();

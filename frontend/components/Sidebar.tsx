@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/lib/useAuth';
 
 const navItems = [
     {
@@ -46,18 +47,12 @@ const navItems = [
 
 export function Sidebar() {
     const pathname = usePathname();
-    const router = useRouter();
+    const { user, company, logout } = useAuth();
 
     function handleLogout() {
-        localStorage.removeItem('solvex_token');
-        localStorage.removeItem('solvex_user');
+        logout();
         toast.success('Sesión cerrada.');
-        router.push('/login');
     }
-
-    const user = typeof window !== 'undefined'
-        ? JSON.parse(localStorage.getItem('solvex_user') || 'null')
-        : null;
 
     return (
         <aside className="flex flex-col w-64 bg-white border-r border-slate-200 h-full shadow-sm flex-shrink-0">
@@ -69,7 +64,7 @@ export function Sidebar() {
                     </svg>
                 </div>
                 <div>
-                    <h1 className="text-slate-900 font-bold text-lg leading-none">SOLVEX</h1>
+                    <h1 className="text-slate-900 font-bold text-lg leading-none">{company?.name || 'SOLVEX'}</h1>
                     <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Analytics</p>
                 </div>
             </div>
@@ -107,7 +102,7 @@ export function Sidebar() {
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-slate-900 truncate">{user.name}</p>
-                            <p className="text-xs text-slate-400 truncate">{user.company?.name}</p>
+                            <p className="text-xs text-slate-400 truncate">{company?.name || 'SOLVEX'}</p>
                         </div>
                     </div>
                 )}

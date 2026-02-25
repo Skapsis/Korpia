@@ -22,6 +22,9 @@ export default function LoginPage() {
             const data = await login(email, password);
             localStorage.setItem('solvex_token', data.token);
             localStorage.setItem('solvex_user', JSON.stringify(data.user));
+            if (data.company) {
+                localStorage.setItem('solvex_company', JSON.stringify(data.company));
+            }
             toast.success(`Bienvenido, ${data.user.name}!`);
             router.push('/dashboard');
         } catch (err: any) {

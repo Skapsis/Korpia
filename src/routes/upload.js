@@ -3,9 +3,8 @@ const router = express.Router();
 const multer = require('multer');
 const Papa = require('papaparse');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../database/prismaClient');
 
-const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'solvex-secret-dev-key';
 
 // Multer: store file in memory

@@ -2,9 +2,8 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+const db = require('../database/sqliteClient');
 
-const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'solvex-secret-dev-key';
 
 // POST /api/auth/login
@@ -16,52 +15,50 @@ router.post('/login', async (req, res) => {
     }
 
     try {
-        const user = await prisma.user.findUnique({
-            where: { email },
-            include: { company: true }
-        });
+        const user = db.prepare('SELECT * FROM User WHERE email = ?').get(email);
 
         if (!user) {
             return res.status(401).json({ success: false, message: 'Credenciales inválidas.' });
         }
 
-        const isValid = await bcrypt.compare(password, user.password);
-        if (!isValid) {
+        const valid = await bcrypt.compare(password, user.password);
+        if (!valid) {
             return res.status(401).json({ success: false, message: 'Credenciales inválidas.' });
         }
 
+        const company = db.prepare('SELECT * FROM Company WHERE id = ?').get(user.companyId);
+
         const token = jwt.sign(
-            { userId: user.id, companyId: user.companyId, role: user.role },
+            { userId: user.id, email: user.email, role: user.role, companyId: user.companyId },
             JWT_SECRET,
-            { expiresIn: '8h' }
+            { expiresIn: '24h' }
         );
 
         res.json({
             success: true,
             token,
-            user: { id: user.id, name: user.name, email: user.email, role: user.role, company: user.company }
+            user: { id: user.id, name: user.name, email: user.email, role: user.role },
+            company: company ? { id: company.id, name: company.name, slug: company.slug } : null
         });
     } catch (error) {
-        console.error('Auth error:', error);
-        res.status(500).json({ success: false, message: 'Error del servidor.' });
+        console.error('Login error:', error);
+        res.status(500).json({ success: false, message: 'Error interno del servidor.' });
     }
 });
 
-// GET /api/auth/me (validate token)
-router.get('/me', async (req, res) => {
+// GET /api/auth/me
+router.get('/me', (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
         return res.status(401).json({ success: false, message: 'Token requerido.' });
     }
-
     try {
         const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, JWT_SECRET);
-        const user = await prisma.user.findUnique({
-            where: { id: decoded.userId },
-            include: { company: true }
-        });
-        res.json({ success: true, user });
+        const payload = jwt.verify(token, JWT_SECRET);
+        const user = db.prepare('SELECT id, email, name, role, companyId FROM User WHERE id = ?').get(payload.userId);
+        if (!user) return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
+        const company = db.prepare('SELECT id, name, slug FROM Company WHERE id = ?').get(user.companyId);
+        res.json({ success: true, user, company });
     } catch {
         res.status(401).json({ success: false, message: 'Token inválido.' });
     }

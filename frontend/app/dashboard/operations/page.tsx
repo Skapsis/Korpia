@@ -2,14 +2,17 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { getKPIs } from '@/lib/queries';
+import { useAuth } from '@/lib/useAuth';
 import { KPICard } from '@/components/KPICard';
 import toast from 'react-hot-toast';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function OperationsPage() {
+    const { companySlug } = useAuth();
+
     const { data, isLoading } = useQuery({
-        queryKey: ['kpis', 'solvex'],
-        queryFn: () => getKPIs('solvex'),
+        queryKey: ['kpis', companySlug],
+        queryFn: () => getKPIs(companySlug),
     });
 
     const handleDevFeature = () => toast('Funcionalidad en desarrollo 🚧', { icon: '⚙️' });
