@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import Link from 'next/link';
 
 interface KPICardProps {
@@ -17,7 +18,7 @@ const colorMap = {
     amber: { bg: 'bg-amber-50', icon: 'text-amber-600', value: 'text-amber-700', badge: 'bg-amber-100 text-amber-700' },
 };
 
-export function KPICard({ title, value, unit, trend, icon, color = 'blue', href }: KPICardProps) {
+function KPICardComponent({ title, value, unit, trend, icon, color = 'blue', href }: KPICardProps) {
     const c = colorMap[color];
     const trendPositive = trend !== undefined && trend >= 0;
 
@@ -54,3 +55,6 @@ export function KPICard({ title, value, unit, trend, icon, color = 'blue', href 
 
     return Content;
 }
+
+// Memoize to prevent unnecessary re-renders when parent updates
+export const KPICard = memo(KPICardComponent);

@@ -2,13 +2,20 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
+import { useMemo, lazy, Suspense } from 'react';
 import { getKPIs } from '@/lib/queries';
 import { useAuth } from '@/lib/useAuth';
-import {
-    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend, CartesianGrid, AreaChart, Area
-} from 'recharts';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+
+// Lazy load Recharts
+const AreaChart = lazy(() => import('recharts').then(mod => ({ default: mod.AreaChart })));
+const Area = lazy(() => import('recharts').then(mod => ({ default: mod.Area })));
+const XAxis = lazy(() => import('recharts').then(mod => ({ default: mod.XAxis })));
+const YAxis = lazy(() => import('recharts').then(mod => ({ default: mod.YAxis })));
+const Tooltip = lazy(() => import('recharts').then(mod => ({ default: mod.Tooltip })));
+const ResponsiveContainer = lazy(() => import('recharts').then(mod => ({ default: mod.ResponsiveContainer })));
+const CartesianGrid = lazy(() => import('recharts').then(mod => ({ default: mod.CartesianGrid })));
 
 const typeConfig: Record<string, { title: string; color: string; description: string }> = {
     commercial: {
@@ -40,11 +47,16 @@ export default function DetailPage() {
         queryFn: () => getKPIs(companySlug),
     });
 
+    // Memoize data transformation
+    const seriesData = useMemo(() => 
+        data?.series?.[type === 'commercial' ? 'commercial' : type === 'operation' ? 'operations' : 'quality'] || [],
+        [data, type]
+    );
+    
+    const reversedData = useMemo(() => seriesData.slice().reverse(), [seriesData]);
+
     if (isLoading) return <div className="p-8 text-center text-slate-400">Cargando detalles...</div>;
     if (isError) return <div className="p-8 text-center text-red-500">Error al cargar datos.</div>;
-
-    const seriesData = data?.series?.[type === 'commercial' ? 'commercial' : type === 'operation' ? 'operations' : 'quality'] || [];
-    const reversedData = seriesData.slice().reverse();
 
     return (
         <div className="p-8">
@@ -75,31 +87,37 @@ export default function DetailPage() {
                     </div>
                 </div>
                 <div className="h-[400px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={reversedData}>
-                            <defs>
-                                <linearGradient id="colorMetric" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor={config.color} stopOpacity={0.1} />
-                                    <stop offset="95%" stopColor={config.color} stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                            <XAxis dataKey="period" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} dy={10} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
-                            <Tooltip
-                                contentStyle={{ borderRadius: 16, border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}
-                            />
-                            <Area
-                                type="monotone"
-                                dataKey={type === 'commercial' ? 'potenciales' : type === 'operation' ? 'tiempoEfectivo' : 'nps'}
-                                stroke={config.color}
-                                strokeWidth={3}
-                                fillOpacity={1}
-                                fill="url(#colorMetric)"
+                    <Suspense fallback={
+                        <div className="h-full flex items-center justify-center">
+                            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                    }>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={reversedData}>
+                                <defs>
+                                    <linearGradient id="colorMetric" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor={config.color} stopOpacity={0.1} />
+                                        <stop offset="95%" stopColor={config.color} stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="period" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} dy={10} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: 16, border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey={type === 'commercial' ? 'potenciales' : type === 'operation' ? 'tiempoEfectivo' : 'nps'}
+                                    stroke={config.color}
+                                    strokeWidth={3}
+                                    fillOpacity={1}
+                                    fill="url(#colorMetric)"
                                 animationDuration={1500}
                             />
                         </AreaChart>
                     </ResponsiveContainer>
+                    </Suspense>
                 </div>
             </div>
 

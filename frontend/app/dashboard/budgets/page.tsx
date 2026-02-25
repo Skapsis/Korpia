@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getKPIs, createCommercialKPI } from '@/lib/queries';
 import { useAuth } from '@/lib/useAuth';
@@ -40,19 +40,21 @@ export default function BudgetsPage() {
         },
     });
 
-    const handleDevFeature = () => toast('Funcionalidad en desarrollo 🚧', { icon: '⚙️' });
+    // Memoize callbacks to prevent recreation on every render
+    const handleDevFeature = useCallback(() => toast('Funcionalidad en desarrollo 🚧', { icon: '⚙️' }), []);
+    
     const commercial = data?.series?.commercial || [];
     const summary = data?.summary || {};
 
-    function handleFormChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const handleFormChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
-    }
+    }, []);
 
-    function handleSubmitModal(e: React.FormEvent) {
+    const handleSubmitModal = useCallback((e: React.FormEvent) => {
         e.preventDefault();
         if (!form.period.trim()) { toast.error('El período es requerido.'); return; }
         mutation.mutate();
-    }
+    }, [form.period, mutation]);
 
     return (
         <div className="p-8">

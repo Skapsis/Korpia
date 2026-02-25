@@ -1,11 +1,21 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useMemo, useCallback, lazy, Suspense } from 'react';
 import { getKPIs } from '@/lib/queries';
 import { useAuth } from '@/lib/useAuth';
 import { KPICard } from '@/components/KPICard';
 import toast from 'react-hot-toast';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+// Lazy load Recharts to reduce bundle size
+const LineChart = lazy(() => import('recharts').then(mod => ({ default: mod.LineChart })));
+const Line = lazy(() => import('recharts').then(mod => ({ default: mod.Line })));
+const XAxis = lazy(() => import('recharts').then(mod => ({ default: mod.XAxis })));
+const YAxis = lazy(() => import('recharts').then(mod => ({ default: mod.YAxis })));
+const CartesianGrid = lazy(() => import('recharts').then(mod => ({ default: mod.CartesianGrid })));
+const Tooltip = lazy(() => import('recharts').then(mod => ({ default: mod.Tooltip })));
+const Legend = lazy(() => import('recharts').then(mod => ({ default: mod.Legend })));
+const ResponsiveContainer = lazy(() => import('recharts').then(mod => ({ default: mod.ResponsiveContainer })));
 
 export default function OperationsPage() {
     const { companySlug } = useAuth();
@@ -15,16 +25,22 @@ export default function OperationsPage() {
         queryFn: () => getKPIs(companySlug),
     });
 
-    const handleDevFeature = () => toast('Funcionalidad en desarrollo 🚧', { icon: '⚙️' });
+    // Memoize callback to prevent recreation
+    const handleDevFeature = useCallback(() => toast('Funcionalidad en desarrollo 🚧', { icon: '⚙️' }), []);
+    
     const operations = data?.series?.operations || [];
     const summary = data?.summary || {};
 
-    const chartData = operations.slice().reverse().map((item: any) => ({
-        periodo: item.period,
-        'T. Efectivo (%)': Math.round(item.tiempoEfectivo),
-        'Órds. Programadas': item.ordenesProgramadas,
-        'Cancelaciones': item.cancelaciones,
-    }));
+    // Memoize chart data transformation
+    const chartData = useMemo(() => 
+        operations.slice().reverse().map((item: any) => ({
+            periodo: item.period,
+            'T. Efectivo (%)': Math.round(item.tiempoEfectivo),
+            'Órds. Programadas': item.ordenesProgramadas,
+            'Cancelaciones': item.cancelaciones,
+        })),
+        [operations]
+    );
 
     return (
         <div className="p-8">
@@ -80,18 +96,24 @@ export default function OperationsPage() {
                                 <p className="text-center">Sin datos. <a href="/dashboard/upload" className="text-blue-500 underline">Carga un CSV</a> para comenzar.</p>
                             </div>
                         ) : (
-                            <ResponsiveContainer width="100%" height={260}>
-                                <LineChart data={chartData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                    <XAxis dataKey="periodo" tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }} />
-                                    <Legend />
-                                    <Line type="monotone" dataKey="T. Efectivo (%)" stroke="#10b981" strokeWidth={2.5} dot={{ r: 4 }} />
-                                    <Line type="monotone" dataKey="Órds. Programadas" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4 }} />
-                                    <Line type="monotone" dataKey="Cancelaciones" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 4 }} />
-                                </LineChart>
-                            </ResponsiveContainer>
+                            <Suspense fallback={
+                                <div className="h-[260px] flex items-center justify-center">
+                                    <div className="w-6 h-6 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                                </div>
+                            }>
+                                <ResponsiveContainer width="100%" height={260}>
+                                    <LineChart data={chartData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                        <XAxis dataKey="periodo" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                                        <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                                        <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }} />
+                                        <Legend />
+                                        <Line type="monotone" dataKey="T. Efectivo (%)" stroke="#10b981" strokeWidth={2.5} dot={{ r: 4 }} />
+                                        <Line type="monotone" dataKey="Órds. Programadas" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4 }} />
+                                        <Line type="monotone" dataKey="Cancelaciones" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 4 }} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </Suspense>
                         )}
                     </div>
 

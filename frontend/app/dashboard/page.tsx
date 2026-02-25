@@ -2,13 +2,22 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { useMemo, useCallback, lazy, Suspense } from 'react';
 import toast from 'react-hot-toast';
 import { getKPIs } from '@/lib/queries';
 import { useAuth } from '@/lib/useAuth';
 import { KPICard } from '@/components/KPICard';
-import {
-    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend, CartesianGrid
-} from 'recharts';
+
+// Lazy load Recharts components to reduce initial bundle size
+const BarChart = lazy(() => import('recharts').then(mod => ({ default: mod.BarChart })));
+const Bar = lazy(() => import('recharts').then(mod => ({ default: mod.Bar })));
+const LineChart = lazy(() => import('recharts').then(mod => ({ default: mod.LineChart })));
+const Line = lazy(() => import('recharts').then(mod => ({ default: mod.Line })));
+const XAxis = lazy(() => import('recharts').then(mod => ({ default: mod.XAxis })));
+const YAxis = lazy(() => import('recharts').then(mod => ({ default: mod.YAxis })));
+const Tooltip = lazy(() => import('recharts').then(mod => ({ default: mod.Tooltip })));
+const ResponsiveContainer = lazy(() => import('recharts').then(mod => ({ default: mod.ResponsiveContainer })));
+const CartesianGrid = lazy(() => import('recharts').then(mod => ({ default: mod.CartesianGrid })));
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -50,22 +59,30 @@ export default function DashboardPage() {
     const commercialSeries = series?.commercial || [];
     const operationSeries = series?.operations || [];
 
-    const chartData = commercialSeries.slice().reverse().map((item: any) => ({
-        periodo: item.period,
-        Potenciales: item.potenciales,
-        Presupuestos: item.presupuestos,
-        Monto: Math.round(item.monto / 1000),
-    }));
+    // Memoize chart data transformations to prevent recalculation on every render
+    const chartData = useMemo(() => 
+        commercialSeries.slice().reverse().map((item: any) => ({
+            periodo: item.period,
+            Potenciales: item.potenciales,
+            Presupuestos: item.presupuestos,
+            Monto: Math.round(item.monto / 1000),
+        })),
+        [commercialSeries]
+    );
 
-    const opChartData = operationSeries.slice().reverse().map((item: any) => ({
-        periodo: item.period,
-        'T. Efectivo': Math.round(item.tiempoEfectivo),
-        Órdenes: item.ordenesProgramadas,
-    }));
+    const opChartData = useMemo(() => 
+        operationSeries.slice().reverse().map((item: any) => ({
+            periodo: item.period,
+            'T. Efectivo': Math.round(item.tiempoEfectivo),
+            Órdenes: item.ordenesProgramadas,
+        })),
+        [operationSeries]
+    );
 
-    const handleDevFeature = () => {
+    // useCallback to prevent function recreation on every render
+    const handleDevFeature = useCallback(() => {
         toast('Funcionalidad en desarrollo 🚧', { icon: '⚙️' });
-    };
+    }, []);
 
     return (
         <div className="p-8 max-w-[1600px] mx-auto">
@@ -158,19 +175,25 @@ export default function DashboardPage() {
                             <p>Sin datos disponibles</p>
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={chartData} barGap={8}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="periodo" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} dy={10} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                                <Tooltip
-                                    cursor={{ fill: '#f8fafc' }}
-                                    contentStyle={{ borderRadius: 16, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                                />
-                                <Bar dataKey="Potenciales" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={32} />
-                                <Bar dataKey="Presupuestos" fill="#8b5cf6" radius={[6, 6, 0, 0]} barSize={32} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                        <Suspense fallback={
+                            <div className="h-[300px] flex items-center justify-center">
+                                <div className="w-6 h-6 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        }>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={chartData} barGap={8}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis dataKey="periodo" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                                    <Tooltip
+                                        cursor={{ fill: '#f8fafc' }}
+                                        contentStyle={{ borderRadius: 16, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                                    />
+                                    <Bar dataKey="Potenciales" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={32} />
+                                    <Bar dataKey="Presupuestos" fill="#8b5cf6" radius={[6, 6, 0, 0]} barSize={32} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </Suspense>
                     )}
                 </div>
 
@@ -190,32 +213,38 @@ export default function DashboardPage() {
                             <p>Sin datos disponibles</p>
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height={300}>
-                            <LineChart data={opChartData}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="periodo" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} dy={10} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                                <Tooltip contentStyle={{ borderRadius: 16, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                                <Line
-                                    type="monotone"
-                                    dataKey="T. Efectivo"
-                                    stroke="#10b981"
-                                    strokeWidth={4}
-                                    dot={{ r: 6, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
-                                    activeDot={{ r: 8, strokeWidth: 0 }}
-                                    animationDuration={2000}
-                                />
-                                <Line
-                                    type="monotone"
-                                    dataKey="Órdenes"
-                                    stroke="#f59e0b"
-                                    strokeWidth={4}
-                                    dot={{ r: 6, fill: '#f59e0b', strokeWidth: 2, stroke: '#fff' }}
-                                    activeDot={{ r: 8, strokeWidth: 0 }}
-                                    animationDuration={2000}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
+                        <Suspense fallback={
+                            <div className="h-[300px] flex items-center justify-center">
+                                <div className="w-6 h-6 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        }>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <LineChart data={opChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis dataKey="periodo" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                                    <Tooltip contentStyle={{ borderRadius: 16, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="T. Efectivo"
+                                        stroke="#10b981"
+                                        strokeWidth={4}
+                                        dot={{ r: 6, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
+                                        activeDot={{ r: 8, strokeWidth: 0 }}
+                                        animationDuration={2000}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="Órdenes"
+                                        stroke="#f59e0b"
+                                        strokeWidth={4}
+                                        dot={{ r: 6, fill: '#f59e0b', strokeWidth: 2, stroke: '#fff' }}
+                                        activeDot={{ r: 8, strokeWidth: 0 }}
+                                        animationDuration={2000}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </Suspense>
                     )}
                 </div>
             </div>
