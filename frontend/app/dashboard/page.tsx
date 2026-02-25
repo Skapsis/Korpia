@@ -1,274 +1,657 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
-import { useMemo, useCallback, lazy, Suspense } from 'react';
-import toast from 'react-hot-toast';
-import { getKPIs } from '@/lib/queries';
-import { useAuth } from '@/lib/useAuth';
-import { KPICard } from '@/components/KPICard';
-import { SkeletonDashboard } from '@/components/SkeletonLoader';
+import React, { useState, useRef, useEffect } from 'react';
+import * as Tabs from '@radix-ui/react-tabs';
+import { Download, BarChart3, Users, CheckCircle, Activity, Briefcase, Upload } from 'lucide-react';
+import CommercialDashboardContent from '@/components/dashboard/CommercialDashboardContent';
+import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
+import DrillDownModal from '@/components/DrillDownModal';
+import { generateExcelReport } from '../../lib/excelExport';
+import DateRangeFilter from '@/components/DateRangeFilter';
+import Papa from 'papaparse';
+import { toast, Toaster } from 'react-hot-toast';
 
-// Lazy load Recharts components to reduce initial bundle size
-const BarChart = lazy(() => import('recharts').then(mod => ({ default: mod.BarChart })));
-const Bar = lazy(() => import('recharts').then(mod => ({ default: mod.Bar })));
-const LineChart = lazy(() => import('recharts').then(mod => ({ default: mod.LineChart })));
-const Line = lazy(() => import('recharts').then(mod => ({ default: mod.Line })));
-const XAxis = lazy(() => import('recharts').then(mod => ({ default: mod.XAxis })));
-const YAxis = lazy(() => import('recharts').then(mod => ({ default: mod.YAxis })));
-const Tooltip = lazy(() => import('recharts').then(mod => ({ default: mod.Tooltip })));
-const ResponsiveContainer = lazy(() => import('recharts').then(mod => ({ default: mod.ResponsiveContainer })));
-const CartesianGrid = lazy(() => import('recharts').then(mod => ({ default: mod.CartesianGrid })));
+// Interfaces for CSV Data
+interface CSVRecord {
+  empresa: string;
+  area: string;
+  kpi: string;
+  semana: string;
+  valor_logrado: number;
+  valor_meta: number;
+  unidad?: string;
+}
 
-export default function DashboardPage() {
-    const router = useRouter();
-    const { companySlug, company, ready } = useAuth();
+// Mock Data for Drill Down
+const detailedData = {
+  sales: [
+    { fecha: "02/02/2026", id: "PR-001", responsable: "Juan Perez", monto: 15000000, estado: "Aprobado" },
+    { fecha: "05/02/2026", id: "PR-002", responsable: "Maria Lopez", monto: 8500000, estado: "Pendiente" },
+    { fecha: "07/02/2026", id: "PR-003", responsable: "Carlos Ruiz", monto: 12300000, estado: "En Revisión" },
+    { fecha: "10/02/2026", id: "PR-004", responsable: "Ana Gomez", monto: 45000000, estado: "Aprobado" },
+  ],
+  operations: [
+    { fecha: "Week 1", id: "OP-101", responsable: "Equipo A", detalle: "Mantenimiento Preventivo", estado: "Completado" },
+    { fecha: "Week 1", id: "OP-102", responsable: "Equipo B", detalle: "Instalación Fibra", estado: "En Proceso" },
+    { fecha: "Week 2", id: "OP-105", responsable: "Equipo C", detalle: "Reparación Nodo", estado: "Pendiente" },
+  ],
+  quality: [
+    { fecha: "03/02/2026", id: "QA-055", responsable: "Soporte N2", detalle: "Falla Masiva Zona Norte", estado: "Resuelto" },
+    { fecha: "06/02/2026", id: "QA-058", responsable: "Tec. Campo", detalle: "Intermitencia Cliente VIP", estado: "En Seguimiento" },
+  ]
+};
 
-    const { data, isLoading, isError, error } = useQuery({
-        queryKey: ['kpis', companySlug],
-        queryFn: () => getKPIs(companySlug),
-        enabled: ready,
-        retry: 1,
-    });
+const columnsConfig = {
+  sales: [
+    { header: "Fecha", key: "fecha" },
+    { header: "ID Presupuesto", key: "id" },
+    { header: "Responsable", key: "responsable" },
+    { header: "Monto", key: "monto", format: "currency" },
+    { header: "Estado", key: "estado" },
+  ],
+  operations: [
+    { header: "Semana/Fecha", key: "fecha" },
+    { header: "ID Orden", key: "id" },
+    { header: "Responsable", key: "responsable" },
+    { header: "Detalle", key: "detalle" },
+    { header: "Estado", key: "estado" },
+  ],
+  quality: [
+    { header: "Fecha Reporte", key: "fecha" },
+    { header: "Ticket ID", key: "id" },
+    { header: "Asignado A", key: "responsable" },
+    { header: "Incidente", key: "detalle" },
+    { header: "Estado", key: "estado" },
+  ]
+};
 
-    // Extract data before any conditional returns
-    const { summary, company: apiCompany, series } = data || {};
-    const commercialSeries = series?.commercial || [];
-    const operationSeries = series?.operations || [];
+// Global Data Source (Initial State)
+const initialData = {
+  empresa: "SOLVEX",
+  mes: "Febrero",
+  comercial: {
+    presupuestos_creados: { valor: 39, meta: 80 },
+    valor_presupuestos: { valor: 121700000, meta: 200000000 }
+  },
+  operaciones: {
+    tiempo_efectivo: { valor: 71, meta: 70, unidad: "%" },
+    ordenes_ejecutadas: { valor: 167, meta: 167 },
+    evolucion_tiempo: [
+      { semana: "Week 1", meta: 70, logrado: 60 },
+      { semana: "Week 2", meta: 70, logrado: 33 }
+    ]
+  },
+  calidad: {
+    cancelacion_tecnica: { valor: 0, meta: 2, unidad: "%" },
+    nps: { valor: 85, meta: 50, unidad: "%" },
+    deficiencias_cerradas: { valor: 45, meta: 55, unidad: "%" }
+  }
+};
 
-    // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
-    // Memoize chart data transformations to prevent recalculation on every render
-    const chartData = useMemo(() => 
-        commercialSeries.slice().reverse().map((item: any) => ({
-            periodo: item.period,
-            Potenciales: item.potenciales,
-            Presupuestos: item.presupuestos,
-            Monto: Math.round(item.monto / 1000),
-        })),
-        [commercialSeries]
-    );
 
-    const opChartData = useMemo(() => 
-        operationSeries.slice().reverse().map((item: any) => ({
-            periodo: item.period,
-            'T. Efectivo': Math.round(item.tiempoEfectivo),
-            Órdenes: item.ordenesProgramadas,
-        })),
-        [operationSeries]
-    );
+export default function ConsolidatedDashboard() {
+  const [data, setData] = useState(initialData);
+  const [showOpTargets, setShowOpTargets] = useState(true);
+  const [activeTab, setActiveTab] = useState('general');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // useCallback to prevent function recreation on every render
-    const handleDevFeature = useCallback(() => {
-        toast('Funcionalidad en desarrollo 🚧', { icon: '⚙️' });
-    }, []);
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalData, setModalData] = useState<any[]>([]);
+  const [modalCols, setModalCols] = useState<any[]>([]);
 
-    // NOW conditional returns are safe
-    if (isLoading) {
-        return <SkeletonDashboard />;
+const procesarDatosCSV = (results: any[]) => {
+    // Filter out rows that don't match our structure or are empty
+    const csvData = results.filter(row => row.empresa && row.area && row.kpi);
+
+    if (csvData.length === 0) {
+        toast.error('El CSV no tiene datos válidos');
+        return;
     }
 
-    if (isError) {
-        const errMsg = (error as any)?.response?.data?.message || 'No se pudo conectar con el servidor.';
-        return (
-            <div className="flex flex-col items-center justify-center h-full gap-4">
-                <div className="text-4xl">⚠️</div>
-                <h2 className="text-xl font-bold text-slate-700">Error al cargar</h2>
-                <p className="text-slate-400 text-sm">{errMsg}</p>
-                <button onClick={() => router.push('/login')} className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold">
-                    Volver al Login
-                </button>
-            </div>
-        );
+    // Clone current structure
+    const newState = JSON.parse(JSON.stringify(initialData));
+    
+    // Helper to sum values for a given KPI
+    const sumKpi = (area: string, kpiName: string) => {
+        const records = csvData.filter(d => d.area === area && d.kpi === kpiName);
+        const logrado = records.reduce((acc, curr) => acc + (curr.valor_logrado || 0), 0);
+        const meta = records.reduce((acc, curr) => acc + (curr.valor_meta || 0), 0);
+        return { logrado, meta, count: records.length };
+    };
+
+    // Helper to average values (for percentages)
+    const avgKpi = (area: string, kpiName: string) => {
+        const records = csvData.filter(d => d.area === area && d.kpi === kpiName);
+        if (records.length === 0) return { logrado: 0, meta: 0 };
+        const logrado = records.reduce((acc, curr) => acc + (curr.valor_logrado || 0), 0) / records.length;
+        const meta = records.reduce((acc, curr) => acc + (curr.valor_meta || 0), 0) / records.length;
+        return { logrado: parseFloat(logrado.toFixed(1)), meta: parseFloat(meta.toFixed(1)) };
+    };
+
+    // ------ Process Commercial (Summable) ------
+    const presCreados = sumKpi('Comercial', 'Presupuestos Creados');
+    if (presCreados.count > 0) {
+        newState.comercial.presupuestos_creados.valor = presCreados.logrado;
+        newState.comercial.presupuestos_creados.meta = presCreados.meta;
     }
 
-    return (
-        <div className="p-8 max-w-[1600px] mx-auto">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
-                <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight">Dashboard General</h1>
-                    <div className="flex items-center gap-2 mt-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <p className="text-slate-500 text-sm font-medium">
-                            {company?.name || apiCompany?.name || 'SOLVEX'} · Datos actualizados en tiempo real
-                        </p>
-                    </div>
+    const valorPres = sumKpi('Comercial', 'Valor Presupuestos');
+    if (valorPres.count > 0) {
+        newState.comercial.valor_presupuestos.valor = valorPres.logrado;
+        newState.comercial.valor_presupuestos.meta = valorPres.meta;
+    }
+
+    // ------ Process Operations ------
+    // Tiempo Efectivo is a percentage, so we AVERAGE it across weeks
+    const tiempoEfectivo = avgKpi('Operaciones', 'Tiempo Efectivo');
+    // Ordenes Ejecutadas is a count, so we SUM it
+    const ordenes = sumKpi('Operaciones', 'Ordenes Ejecutadas');
+    
+    // Evolution Graph Data - Mapped directly from rows
+    // We look for 'Tiempo Efectivo' rows specifically to populate the graph
+    const evolutionData = csvData
+        .filter(d => d.area === 'Operaciones' && d.kpi === 'Tiempo Efectivo')
+        .map(d => ({
+            semana: d.semana || 'Week ?',
+            meta: d.valor_meta,
+            logrado: d.valor_logrado
+        }));
+
+    // If we have data, update state
+    const hasOpsData = csvData.some(d => d.area === 'Operaciones');
+    if (hasOpsData) {
+        newState.operaciones.tiempo_efectivo.valor = tiempoEfectivo.logrado;
+        newState.operaciones.tiempo_efectivo.meta = tiempoEfectivo.meta;
+        newState.operaciones.ordenes_ejecutadas.valor = ordenes.logrado;
+        newState.operaciones.ordenes_ejecutadas.meta = ordenes.meta;
+        
+        if (evolutionData.length > 0) {
+            newState.operaciones.evolucion_tiempo = evolutionData;
+        }
+    }
+
+    // ------ Process Quality (Averages) ------
+    const nps = avgKpi('Calidad', 'NPS');
+    const cancelacion = avgKpi('Calidad', 'Cancelacion Tecnica'); // Note: CSV might use "Cancelación" or "Cancelacion"
+    const deficiencias = avgKpi('Calidad', 'Deficiencias Cerradas');
+
+    if (csvData.some(d => d.area === 'Calidad')) {
+        newState.calidad.nps.valor = nps.logrado;
+        newState.calidad.nps.meta = nps.meta;
+        
+        newState.calidad.cancelacion_tecnica.valor = cancelacion.logrado;
+        newState.calidad.cancelacion_tecnica.meta = cancelacion.meta;
+        
+        newState.calidad.deficiencias_cerradas.valor = deficiencias.logrado;
+        newState.calidad.deficiencias_cerradas.meta = deficiencias.meta;
+    }
+
+    setData(newState);
+    toast.success('Datos actualizados correctamente');
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      Papa.parse(file, {
+        header: true,
+        dynamicTyping: true,
+        complete: (results) => {
+           console.log('Parsed Results:', results.data);
+           procesarDatosCSV(results.data as CSVRecord[]);
+        },
+        error: (error) => {
+            console.error('Error parsing CSV:', error);
+            toast.error('Error al leer el archivo CSV');
+        }
+      });
+    }
+  };
+
+  const triggerFileUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Load default CSV on mount
+  useEffect(() => {
+    const defaultCsvUrl = '/datos_solvex_limpio.csv';
+    
+    fetch(defaultCsvUrl)
+        .then(response => {
+            if (!response.ok) {
+                console.log("No default CSV found or error loading it.");
+                return null;
+            }
+            return response.text();
+        })
+        .then(csvText => {
+            if (!csvText) return;
+            Papa.parse(csvText, {
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                     // Auto-process if valid data found
+                     if (results.data && results.data.length > 0) {
+                        console.log("Auto-loading CSV data...");
+                        procesarDatosCSV(results.data);
+                     }
+                },
+                error: (err: any) => console.error("Error parsing default CSV:", err)
+            });
+        })
+        .catch((err: any) => console.error("Error fetching default CSV:", err));
+  }, []);
+
+  // Export Handler
+  const handleExport = () => {
+    let reportTitle = `Reporte General - ${data.empresa}`;
+    let exportData: any[] = [];
+    let exportColumns: any[] = [];
+    
+    // Determine data based on active tab
+    // Ideally we would export a summary for "general", but for now let's export Sales as default or all consolidated
+    if (activeTab === 'general' || activeTab === 'comercial') {
+        reportTitle = `Reporte Comercial - ${data.empresa}`;
+        exportData = detailedData.sales;
+        exportColumns = columnsConfig.sales;
+    } else if (activeTab === 'operaciones') {
+        reportTitle = `Reporte Operaciones - ${data.empresa}`;
+        exportData = detailedData.operations;
+        exportColumns = columnsConfig.operations;
+    } else if (activeTab === 'calidad') {
+        reportTitle = `Reporte Calidad - ${data.empresa}`;
+        exportData = detailedData.quality;
+        exportColumns = columnsConfig.quality;
+    }
+
+    generateExcelReport(
+        reportTitle,
+        activeTab.charAt(0).toUpperCase() + activeTab.slice(1),
+        exportColumns,
+        exportData,
+        `Periodo: ${data.mes} - Generado el ${new Date().toLocaleDateString()}`
+    );
+  };
+
+  // Drill Down Handler
+  const handleOpenDetails = (category: string, title: string) => {
+    setModalTitle(`Detalle de: ${title}`);
+    
+    // Select mock data based on category
+    let selectedData: any[] = [];
+    let selectedCols: any[] = [];
+    
+    if (category === 'sales') {
+        selectedData = detailedData.sales;
+        selectedCols = columnsConfig.sales;
+    } else if (category === 'operations') {
+        selectedData = detailedData.operations;
+        selectedCols = columnsConfig.operations;
+    } else if (category === 'quality') {
+        selectedData = detailedData.quality;
+        selectedCols = columnsConfig.quality;
+    }
+    
+    setModalData(selectedData);
+    setModalCols(selectedCols);
+    setIsModalOpen(true);
+  };
+  
+  // Helper for formatting currency
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat('es-CO', { 
+      style: 'currency', 
+      currency: 'COP', 
+      maximumFractionDigits: 0,
+      notation: "compact",
+      compactDisplay: "short"
+    }).format(val);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 p-6 md:p-8 font-sans text-slate-900">
+      
+      <Toaster position="top-right" />
+      
+      <input 
+        type="file" 
+        accept=".csv" 
+        ref={fileInputRef} 
+        onChange={handleFileUpload} 
+        className="hidden" 
+      />
+
+      {/* Drill Down Modal */}
+      <DrillDownModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title={modalTitle} 
+        data={modalData} 
+        columns={modalCols}
+      />
+      
+      {/* Header */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard Maestro {data.empresa}</h1>
+            <p className="text-slate-500 mt-1">Visión consolidada - Periodo: {data.mes}</p>
+        </div>
+        <div className="flex items-center gap-3">
+             <button 
+                onClick={triggerFileUpload}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
+            >
+                <Upload className="w-4 h-4 text-emerald-600" />
+                <span>Cargar Datos (CSV)</span>
+            </button>
+            <DateRangeFilter />
+            <button 
+                onClick={handleExport}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shadow-md"
+            >
+                <Download className="w-4 h-4" />
+                <span>Exportar Excel</span>
+            </button>
+        </div>
+      </header>
+
+      {/* Tabs System */}
+      <Tabs.Root value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs.List className="flex flex-wrap border-b border-slate-200 mb-8" aria-label="Dashboard Sections">
+          <Tabs.Trigger 
+            value="general" 
+            className="group flex items-center gap-2 px-6 py-3 text-sm font-medium text-slate-500 hover:text-indigo-600 border-b-2 border-transparent data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-600 transition-all outline-none"
+          >
+            <BarChart3 className="w-4 h-4 group-data-[state=active]:text-indigo-600" />
+            Resumen General
+          </Tabs.Trigger>
+          <Tabs.Trigger 
+            value="comercial" 
+            className="group flex items-center gap-2 px-6 py-3 text-sm font-medium text-slate-500 hover:text-indigo-600 border-b-2 border-transparent data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-600 transition-all outline-none"
+          >
+            <Briefcase className="w-4 h-4 group-data-[state=active]:text-indigo-600" />
+            Comercial
+          </Tabs.Trigger>
+          <Tabs.Trigger 
+            value="operaciones" 
+            className="group flex items-center gap-2 px-6 py-3 text-sm font-medium text-slate-500 hover:text-indigo-600 border-b-2 border-transparent data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-600 transition-all outline-none"
+          >
+            <Activity className="w-4 h-4 group-data-[state=active]:text-indigo-600" />
+            Operaciones
+          </Tabs.Trigger>
+          <Tabs.Trigger 
+            value="calidad" 
+            className="group flex items-center gap-2 px-6 py-3 text-sm font-medium text-slate-500 hover:text-indigo-600 border-b-2 border-transparent data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-600 transition-all outline-none"
+          >
+            <CheckCircle className="w-4 h-4 group-data-[state=active]:text-indigo-600" />
+            Calidad Técnica
+          </Tabs.Trigger>
+        </Tabs.List>
+
+        {/* Tab Content: Resumen General */}
+        <Tabs.Content value="general" className="outline-none animate-in fade-in duration-300">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                {/* Card 1: Comercial */}
+                <div onClick={() => handleOpenDetails('sales', 'Cumplimiento Ventas')} className="cursor-pointer transition-transform hover:scale-[1.02]">
+                    <BigSummaryCard 
+                        title="Cumplimiento Ventas"
+                        value={formatCurrency(data.comercial.valor_presupuestos.valor)}
+                        target={formatCurrency(data.comercial.valor_presupuestos.meta)}
+                        headerValue={data.comercial.valor_presupuestos.valor}
+                        headerTarget={data.comercial.valor_presupuestos.meta}
+                        icon={<Briefcase className="w-6 h-6 text-white" />} 
+                        color="indigo"
+                        type="currency"
+                    />
                 </div>
-                <div className="flex items-center gap-3">
-                    <button onClick={handleDevFeature} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 shadow-sm transition-all flex gap-2 items-center">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
-                        </svg>
-                        Filtrar
-                    </button>
-                    <button onClick={handleDevFeature} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 shadow-lg shadow-slate-200 transition-all flex gap-2 items-center">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                        </svg>
-                        Exportar
-                    </button>
+
+                {/* Card 2: Operaciones */}
+                <div onClick={() => handleOpenDetails('operations', 'Tiempo Efectivo Global')} className="cursor-pointer transition-transform hover:scale-[1.02]">
+                    <BigSummaryCard 
+                        title="Tiempo Efectivo Global"
+                        value={`${data.operaciones.tiempo_efectivo.valor}%`}
+                        target={`${data.operaciones.tiempo_efectivo.meta}%`}
+                        headerValue={data.operaciones.tiempo_efectivo.valor}
+                        headerTarget={data.operaciones.tiempo_efectivo.meta}
+                        icon={<Activity className="w-6 h-6 text-white" />}
+                        color="emerald"
+                        type="percentage"
+                        isBetterHigher={true}
+                    />
+                </div>
+
+                {/* Card 3: Calidad */}
+                <div onClick={() => handleOpenDetails('quality', 'NPS (Satisfacción)')} className="cursor-pointer transition-transform hover:scale-[1.02]">
+                    <BigSummaryCard 
+                        title="NPS (Satisfacción)"
+                        value={`${data.calidad.nps.valor}%`}
+                        target={`>${data.calidad.nps.meta}%`}
+                        headerValue={data.calidad.nps.valor}
+                        headerTarget={data.calidad.nps.meta}
+                        icon={<Users className="w-6 h-6 text-white" />}
+                        color="blue"
+                        type="percentage"
+                        isBetterHigher={true}
+                    />
                 </div>
             </div>
 
-            {/* KPI Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <KPICard
-                    title="Potenciales"
-                    value={summary?.potenciales ?? '—'}
-                    icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" /></svg>}
-                    color="blue"
-                    trend={5}
-                    href="/dashboard/details/commercial"
-                />
-                <KPICard
-                    title="Presupuestos"
-                    value={summary?.presupuestos ?? '—'}
-                    icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>}
-                    color="violet"
-                    trend={-2}
-                    href="/dashboard/details/commercial"
-                />
-                <KPICard
-                    title="Monto Total"
-                    value={summary?.monto ? `$${(summary.monto / 1000).toFixed(0)}K` : '—'}
-                    icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                    color="emerald"
-                    trend={12}
-                    href="/dashboard/details/commercial"
-                />
-                <KPICard
-                    title="Cumplimiento"
-                    value={summary?.cumplimiento ? `${summary.cumplimiento.toFixed(1)}` : '—'}
-                    unit="%"
-                    icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>}
-                    color="amber"
-                    trend={3}
-                    href="/dashboard/details/commercial"
-                />
-            </div>
+        </Tabs.Content>
 
-            {/* Charts Row */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-                {/* Commercial Chart */}
-                <div className="bg-white rounded-[32px] border border-slate-200 p-8 shadow-sm hover:shadow-md transition-all">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h3 className="font-bold text-slate-900 text-lg">Rendimiento Comercial</h3>
-                            <p className="text-slate-400 text-xs mt-1">Comparativa de funnel comercial por Q</p>
-                        </div>
-                        <div className="flex gap-4">
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Potenciales</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-violet-500"></span>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Presupuestos</span>
-                            </div>
-                        </div>
+        {/* Tab Content: Comercial */}
+        <Tabs.Content value="comercial" className="outline-none animate-in fade-in duration-300">
+            <CommercialDashboardContent />
+        </Tabs.Content>
+
+        {/* Tab Content: Operaciones */}
+        <Tabs.Content value="operaciones" className="outline-none animate-in fade-in duration-300">
+            <div className="space-y-6">
+                
+                {/* Top Cards for Operations */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div onClick={() => handleOpenDetails('operations', 'Tiempo Efectivo')} className="cursor-pointer">
+                        <KPICard 
+                            title="Tiempo Efectivo de Trabajo"
+                            value={`${data.operaciones.tiempo_efectivo.valor}%`}
+                            metaLabel={`Meta: ${data.operaciones.tiempo_efectivo.meta}%`}
+                            isPositive={data.operaciones.tiempo_efectivo.valor >= data.operaciones.tiempo_efectivo.meta}
+                        />
                     </div>
-                    {chartData.length === 0 ? (
-                        <div className="h-64 flex items-center justify-center text-slate-300">
-                            <p>Sin datos disponibles</p>
-                        </div>
-                    ) : (
-                        <Suspense fallback={
-                            <div className="h-[300px] flex items-center justify-center">
-                                <div className="w-6 h-6 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                            </div>
-                        }>
-                            <ResponsiveContainer width="100%" height={300}>
-                                <BarChart data={chartData} barGap={8}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                    <XAxis dataKey="periodo" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                                    <Tooltip
-                                        cursor={{ fill: '#f8fafc' }}
-                                        contentStyle={{ borderRadius: 16, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                                    />
-                                    <Bar dataKey="Potenciales" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={32} />
-                                    <Bar dataKey="Presupuestos" fill="#8b5cf6" radius={[6, 6, 0, 0]} barSize={32} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </Suspense>
-                    )}
+                    <div onClick={() => handleOpenDetails('operations', 'Órdenes Ejecutadas')} className="cursor-pointer">
+                        <KPICard 
+                            title="Órdenes Ejecutadas"
+                            value={data.operaciones.ordenes_ejecutadas.valor}
+                            metaLabel={`Meta: ${data.operaciones.ordenes_ejecutadas.meta}`}
+                            isPositive={data.operaciones.ordenes_ejecutadas.valor >= data.operaciones.ordenes_ejecutadas.meta}
+                        />
+                    </div>
                 </div>
 
                 {/* Operations Chart */}
-                <div className="bg-white rounded-[32px] border border-slate-200 p-8 shadow-sm hover:shadow-md transition-all">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h3 className="font-bold text-slate-900 text-lg">Tiempo Efectivo</h3>
-                            <p className="text-slate-400 text-xs mt-1">Eficiencia de servicios operativos</p>
-                        </div>
-                        <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-tighter">
-                            +12.5% mejora
-                        </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-lg font-semibold text-slate-800">Evolución del Tiempo Efectivo</h3>
+                         <button 
+                            onClick={() => setShowOpTargets(!showOpTargets)}
+                            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                                showOpTargets ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                        >
+                            {showOpTargets ? 'Ocultar Metas' : 'Mostrar Metas'}
+                        </button>
                     </div>
-                    {opChartData.length === 0 ? (
-                        <div className="h-64 flex items-center justify-center text-slate-300">
-                            <p>Sin datos disponibles</p>
-                        </div>
-                    ) : (
-                        <Suspense fallback={
-                            <div className="h-[300px] flex items-center justify-center">
-                                <div className="w-6 h-6 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                            </div>
-                        }>
-                            <ResponsiveContainer width="100%" height={300}>
-                                <LineChart data={opChartData}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                    <XAxis dataKey="periodo" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                                    <Tooltip contentStyle={{ borderRadius: 16, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="T. Efectivo"
-                                        stroke="#10b981"
-                                        strokeWidth={4}
-                                        dot={{ r: 6, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
-                                        activeDot={{ r: 8, strokeWidth: 0 }}
-                                        animationDuration={2000}
-                                    />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="Órdenes"
-                                        stroke="#f59e0b"
-                                        strokeWidth={4}
-                                        dot={{ r: 6, fill: '#f59e0b', strokeWidth: 2, stroke: '#fff' }}
-                                        activeDot={{ r: 8, strokeWidth: 0 }}
-                                        animationDuration={2000}
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </Suspense>
-                    )}
+                    <div className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart 
+                                data={data.operaciones.evolucion_tiempo}
+                                // Add click handler to chart
+                                onClick={(e: any) => {
+                                   if (e && e.activePayload && e.activePayload[0]) {
+                                      handleOpenDetails('operations', `Evolución ${e.activePayload[0].payload.semana}`);
+                                   }
+                                }}
+                            >
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="semana" fontSize={12} />
+                                <YAxis domain={[0, 100]} fontSize={12} tickFormatter={(val) => `${val}%`} />
+                                <Tooltip />
+                                <Legend />
+                                <Line 
+                                  type="monotone" 
+                                  dataKey="logrado" 
+                                  name="Tiempo Logrado %" 
+                                  stroke="#10b981" 
+                                  strokeWidth={3} 
+                                  activeDot={{ 
+                                      r: 8, 
+                                      onClick: (e: any) => {
+                                          e.stopPropagation && e.stopPropagation();
+                                          // Note: onClick on activeDot might not fire reliably depending on recharts version/events.
+                                          // The Chart onClick is safer.
+                                      } 
+                                  }} 
+                                />
+                                {showOpTargets && (
+                                     <Line type="step" dataKey="meta" name="Meta %" stroke="#94a3b8" strokeDasharray="5 5" dot={false} strokeWidth={2} />
+                                )}
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             </div>
+        </Tabs.Content>
 
-            {/* Quick Actions */}
-            <div className="bg-slate-900 rounded-[32px] p-10 text-white shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-[100px] opacity-20 group-hover:opacity-30 transition-opacity"></div>
-                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-                    <div>
-                        <h3 className="text-2xl font-bold mb-2">Acciones Rápidas</h3>
-                        <p className="text-slate-400 text-sm">Gestiona la plataforma y configura tus reportes personalizados.</p>
-                    </div>
-                    <div className="flex flex-wrap gap-4">
-                        <button onClick={() => router.push('/dashboard/upload')} className="flex items-center gap-3 px-6 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-sm rounded-2xl transition-all border border-white/10">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
-                            Cargar Datos
-                        </button>
-                        <button onClick={handleDevFeature} className="flex items-center gap-3 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-2xl transition-all shadow-lg shadow-blue-500/20">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            Nuevo Reporte
-                        </button>
-                    </div>
+        {/* Tab Content: Calidad */}
+        <Tabs.Content value="calidad" className="outline-none animate-in fade-in duration-300">
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <div onClick={() => handleOpenDetails('quality', 'Cancelación Técnica')} className="cursor-pointer">
+                    <KPICard 
+                        title="Cancelación por Causas Técnicas"
+                        value={`${data.calidad.cancelacion_tecnica.valor}%`}
+                        metaLabel={`Meta: <${data.calidad.cancelacion_tecnica.meta}%`}
+                        // Lower is better for cancellation. 0 <= 2 is TRUE (Positive/Green)
+                        isPositive={data.calidad.cancelacion_tecnica.valor <= data.calidad.cancelacion_tecnica.meta}
+                    />
                 </div>
+
+                <div onClick={() => handleOpenDetails('quality', 'NPS')} className="cursor-pointer">
+                    <KPICard 
+                        title="NPS (Satisfacción)"
+                        value={`${data.calidad.nps.valor}%`}
+                        metaLabel={`Meta: >${data.calidad.nps.meta}%`}
+                        isPositive={data.calidad.nps.valor >= data.calidad.nps.meta}
+                    />
+                </div>
+
+                <div onClick={() => handleOpenDetails('quality', 'Deficiencias')} className="cursor-pointer">
+                    <KPICard 
+                        title="Resolución de Deficiencias"
+                        value={`${data.calidad.deficiencias_cerradas.valor}%`}
+                        // "45% vs Meta <55%". 
+                        // Assume lower is better based on "Meta < 55%" usually implying "Should be less than".
+                        // If target < 55 and value is 45, then 45 < 55 is good.
+                        metaLabel={`Meta: <${data.calidad.deficiencias_cerradas.meta}%`}
+                        isPositive={data.calidad.deficiencias_cerradas.valor <= data.calidad.deficiencias_cerradas.meta}
+                    />
+                </div>
+            </div>
+        </Tabs.Content>
+
+      </Tabs.Root>
+    </div>
+  );
+}
+
+// --- Sub-components ---
+
+function BigSummaryCard({ title, value, target, headerValue, headerTarget, icon, color, type = 'currency', isBetterHigher = true }: any) {
+  
+  // Calculate percentage for progress bar
+  let progressPercentage = 0;
+  if (headerTarget > 0) {
+      progressPercentage = (headerValue / headerTarget) * 100;
+  } else if (headerTarget === 0 && headerValue === 0) {
+      progressPercentage = 100; // 0/0 target met?
+  }
+  
+  // Status Logic
+  let isSuccess = false;
+  if (type === 'currency' || isBetterHigher) {
+      isSuccess = headerValue >= headerTarget;
+  } else {
+      isSuccess = headerValue <= headerTarget;
+  }
+
+  // Color mapping
+  const colorMap: any = {
+      indigo: { bg: 'bg-indigo-600', text: 'text-indigo-600', light: 'bg-indigo-50', bar: 'bg-indigo-500' },
+      emerald: { bg: 'bg-emerald-600', text: 'text-emerald-600', light: 'bg-emerald-50', bar: 'bg-emerald-500' },
+      blue: { bg: 'bg-blue-600', text: 'text-blue-600', light: 'bg-blue-50', bar: 'bg-blue-500' },
+      rose: { bg: 'bg-rose-600', text: 'text-rose-600', light: 'bg-rose-50', bar: 'bg-rose-500' },
+      amber: { bg: 'bg-amber-600', text: 'text-amber-600', light: 'bg-amber-50', bar: 'bg-amber-500' },
+  };
+
+  const theme = colorMap[color] || colorMap.indigo;
+  
+  return (
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 relative overflow-hidden group hover:shadow-md transition-all">
+      <div className={`absolute -right-6 -top-6 p-8 rounded-full ${theme.light} opacity-50 group-hover:scale-110 transition-transform`}>
+        {/* Decorative circle */}
+      </div>
+      
+      <div className="relative z-10">
+        <div className="flex justify-between items-start mb-4">
+            <div className={`p-3 rounded-xl ${theme.bg} text-white shadow-lg shadow-slate-100`}>
+                {icon}
+            </div>
+            <span className={`px-2 py-1 rounded-full text-xs font-bold ${isSuccess ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                {isSuccess ? 'Meta Cumplida' : 'Atención'}
+            </span>
+        </div>
+
+        <h3 className="text-slate-500 font-medium text-sm mb-1">{title}</h3>
+        <div className="flex items-baseline gap-2 mb-4">
+             <span className="text-3xl font-bold text-slate-900">{value}</span>
+             <span className="text-sm text-slate-400 font-medium">/ {target}</span>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+            <div 
+                className={`h-full rounded-full transition-all duration-1000 ease-out ${isSuccess ? theme.bar : 'bg-rose-500'}`} 
+                style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+            />
+        </div>
+        <div className="mt-2 text-xs flex justify-between text-slate-400">
+            <span>Progreso Actual</span>
+            <span className={`font-bold ${isSuccess ? theme.text : 'text-rose-500'}`}>
+                {Math.round(progressPercentage)}%
+            </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KPICard({ title, value, metaLabel, isPositive }: any) {
+    return (
+        <div className={`bg-white p-6 rounded-xl shadow-sm border-l-4 hover:shadow-md transition-all ${isPositive ? 'border-l-emerald-500' : 'border-l-rose-500'}`}>
+            <div className="flex justify-between items-start mb-2">
+                <h3 className="text-sm font-medium text-slate-500">{title}</h3>
+                <div className={`p-1 rounded-full ${isPositive ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                     {isPositive ? <CheckCircle className="w-4 h-4" /> : <Activity className="w-4 h-4" />}
+                </div>
+            </div>
+            <div className="flex flex-col gap-1">
+                <span className="text-3xl font-bold text-slate-900">{value}</span>
+                <span className={`text-sm font-medium ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {metaLabel}
+                </span>
             </div>
         </div>
     );
