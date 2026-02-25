@@ -5,6 +5,7 @@ import { useMemo, useCallback, lazy, Suspense } from 'react';
 import { getKPIs } from '@/lib/queries';
 import { useAuth } from '@/lib/useAuth';
 import { KPICard } from '@/components/KPICard';
+import { SkeletonKPI, SkeletonChart } from '@/components/SkeletonLoader';
 import toast from 'react-hot-toast';
 
 // Lazy load Recharts to reduce bundle size
@@ -55,9 +56,14 @@ export default function OperationsPage() {
             </div>
 
             {isLoading ? (
-                <div className="flex items-center justify-center h-64">
-                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                </div>
+                <>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+                        <SkeletonKPI />
+                        <SkeletonKPI />
+                        <SkeletonKPI />
+                    </div>
+                    <SkeletonChart />
+                </>
             ) : (
                 <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">

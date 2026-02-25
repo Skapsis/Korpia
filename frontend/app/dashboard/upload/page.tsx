@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { uploadCSV, downloadTemplate } from '@/lib/queries';
 import { useAuth } from '@/lib/useAuth';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '@/lib/errorHandling';
 
 const COMPANY_OPTIONS = [
     { value: 'solvex', label: 'SOLVEX' },
@@ -35,7 +36,7 @@ export default function UploadPage() {
             setUploadedFile(null);
         },
         onError: (err: any) => {
-            toast.error(err.response?.data?.message || 'Error al cargar el archivo.');
+            toast.error(getErrorMessage(err, 'Error al cargar el archivo. Verifica el formato y vuelve a intentar.'));
         },
     });
 

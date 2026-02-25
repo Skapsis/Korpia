@@ -5,8 +5,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getKPIs, createCommercialKPI } from '@/lib/queries';
 import { useAuth } from '@/lib/useAuth';
 import { KPICard } from '@/components/KPICard';
+import { SkeletonKPI, SkeletonTable } from '@/components/SkeletonLoader';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { getErrorMessage } from '@/lib/errorHandling';
 
 const EMPTY_FORM = { period: '', potenciales: '', presupuestos: '', monto: '', cumplimiento: '' };
 
@@ -36,7 +38,7 @@ export default function BudgetsPage() {
             setForm(EMPTY_FORM);
         },
         onError: (err: any) => {
-            toast.error(err.response?.data?.message || 'Error al crear el presupuesto.');
+            toast.error(getErrorMessage(err, 'Error al crear el presupuesto. Verifica los datos ingresados.'));
         },
     });
 
@@ -75,9 +77,14 @@ export default function BudgetsPage() {
             </div>
 
             {isLoading ? (
-                <div className="flex items-center justify-center h-64">
-                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                </div>
+                <>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+                        <SkeletonKPI />
+                        <SkeletonKPI />
+                        <SkeletonKPI />
+                    </div>
+                    <SkeletonTable />
+                </>
             ) : (
                 <>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">

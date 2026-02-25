@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { getKPIs } from '@/lib/queries';
 import { useAuth } from '@/lib/useAuth';
 import { KPICard } from '@/components/KPICard';
+import { SkeletonDashboard } from '@/components/SkeletonLoader';
 
 // Lazy load Recharts components to reduce initial bundle size
 const BarChart = lazy(() => import('recharts').then(mod => ({ default: mod.BarChart })));
@@ -31,14 +32,7 @@ export default function DashboardPage() {
     });
 
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <div className="flex flex-col items-center gap-3">
-                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-slate-400 text-sm">Cargando datos...</p>
-                </div>
-            </div>
-        );
+        return <SkeletonDashboard />;
     }
 
     if (isError) {

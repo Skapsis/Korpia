@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { login } from '@/lib/queries';
+import { getErrorMessage } from '@/lib/errorHandling';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -28,8 +29,7 @@ export default function LoginPage() {
             toast.success(`Bienvenido, ${data.user.name}!`);
             router.push('/dashboard');
         } catch (err: any) {
-            const msg = err.response?.data?.message || 'Error al iniciar sesión.';
-            toast.error(msg);
+            toast.error(getErrorMessage(err, 'Error al iniciar sesión. Verifica tus credenciales.'));
         } finally {
             setLoading(false);
         }
