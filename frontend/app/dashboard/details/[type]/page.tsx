@@ -47,6 +47,7 @@ export default function DetailPage() {
         queryFn: () => getKPIs(companySlug),
     });
 
+    // ALL HOOKS MUST BE CALLED BEFORE CONDITIONAL RETURNS
     // Memoize data transformation
     const seriesData = useMemo(() => 
         data?.series?.[type === 'commercial' ? 'commercial' : type === 'operation' ? 'operations' : 'quality'] || [],
@@ -55,6 +56,7 @@ export default function DetailPage() {
     
     const reversedData = useMemo(() => seriesData.slice().reverse(), [seriesData]);
 
+    // NOW conditional returns are safe
     if (isLoading) return <div className="p-8 text-center text-slate-400">Cargando detalles...</div>;
     if (isError) return <div className="p-8 text-center text-red-500">Error al cargar datos.</div>;
 

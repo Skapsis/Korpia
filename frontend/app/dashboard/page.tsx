@@ -31,28 +31,12 @@ export default function DashboardPage() {
         retry: 1,
     });
 
-    if (isLoading) {
-        return <SkeletonDashboard />;
-    }
-
-    if (isError) {
-        const errMsg = (error as any)?.response?.data?.message || 'No se pudo conectar con el servidor.';
-        return (
-            <div className="flex flex-col items-center justify-center h-full gap-4">
-                <div className="text-4xl">⚠️</div>
-                <h2 className="text-xl font-bold text-slate-700">Error al cargar</h2>
-                <p className="text-slate-400 text-sm">{errMsg}</p>
-                <button onClick={() => router.push('/login')} className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold">
-                    Volver al Login
-                </button>
-            </div>
-        );
-    }
-
+    // Extract data before any conditional returns
     const { summary, company: apiCompany, series } = data || {};
     const commercialSeries = series?.commercial || [];
     const operationSeries = series?.operations || [];
 
+    // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
     // Memoize chart data transformations to prevent recalculation on every render
     const chartData = useMemo(() => 
         commercialSeries.slice().reverse().map((item: any) => ({
@@ -77,6 +61,25 @@ export default function DashboardPage() {
     const handleDevFeature = useCallback(() => {
         toast('Funcionalidad en desarrollo 🚧', { icon: '⚙️' });
     }, []);
+
+    // NOW conditional returns are safe
+    if (isLoading) {
+        return <SkeletonDashboard />;
+    }
+
+    if (isError) {
+        const errMsg = (error as any)?.response?.data?.message || 'No se pudo conectar con el servidor.';
+        return (
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+                <div className="text-4xl">⚠️</div>
+                <h2 className="text-xl font-bold text-slate-700">Error al cargar</h2>
+                <p className="text-slate-400 text-sm">{errMsg}</p>
+                <button onClick={() => router.push('/login')} className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold">
+                    Volver al Login
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="p-8 max-w-[1600px] mx-auto">
