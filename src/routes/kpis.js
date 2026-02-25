@@ -70,7 +70,11 @@ router.post('/:companySlug/commercial', authMiddleware, (req, res) => {
 // GET /api/kpis/:companyId
 router.get('/:companyId', authMiddleware, (req, res) => {
     const { companyId } = req.params;
-    const { period } = req.query;
+    const { period, limit, offset, startDate, endDate } = req.query;
+
+    // Parse pagination params
+    const pageLimit = Math.min(parseInt(limit) || 12, 100); // Max 100 records
+    const pageOffset = parseInt(offset) || 0;
 
     try {
         const company = db.prepare('SELECT * FROM Company WHERE slug = ?').get(companyId);
@@ -78,12 +82,53 @@ router.get('/:companyId', authMiddleware, (req, res) => {
             return res.status(404).json({ success: false, message: 'Empresa no encontrada.' });
         }
 
-        const periodWhere = period ? 'AND period = ?' : '';
-        const args = period ? [company.id, period] : [company.id];
+        // Build WHERE clause with date range support
+        let whereConditions = ['companyId = ?'];
+        let queryArgs = [company.id];
 
-        const commercial = db.prepare(`SELECT * FROM CommercialKPI WHERE companyId = ? ${periodWhere} ORDER BY period DESC LIMIT 12`).all(...args);
-        const operations = db.prepare(`SELECT * FROM OperationKPI WHERE companyId = ? ${periodWhere} ORDER BY period DESC LIMIT 12`).all(...args);
-        const quality = db.prepare(`SELECT * FROM QualityKPI WHERE companyId = ? ${periodWhere} ORDER BY period DESC LIMIT 12`).all(...args);
+        if (period) {
+            whereConditions.push('period = ?');
+            queryArgs.push(period);
+        }
+
+        if (startDate) {
+            whereConditions.push('period >= ?');
+            queryArgs.push(startDate);
+        }
+
+        if (endDate) {
+            whereConditions.push('period <= ?');
+            queryArgs.push(endDate);
+        }
+
+        const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
+        
+        // Queries with pagination
+        const commercial = db.prepare(`
+            SELECT * FROM CommercialKPI 
+            ${whereClause}
+            ORDER BY period DESC 
+            LIMIT ? OFFSET ?
+        `).all(...queryArgs, pageLimit, pageOffset);
+
+        const operations = db.prepare(`
+            SELECT * FROM OperationKPI 
+            ${whereClause}
+            ORDER BY period DESC 
+            LIMIT ? OFFSET ?
+        `).all(...queryArgs, pageLimit, pageOffset);
+
+        const quality = db.prepare(`
+            SELECT * FROM QualityKPI 
+            ${whereClause}
+            ORDER BY period DESC 
+            LIMIT ? OFFSET ?
+        `).all(...queryArgs, pageLimit, pageOffset);
+
+        // Get counts for pagination metadata
+        const commCount = db.prepare(`SELECT COUNT(*) as count FROM CommercialKPI ${whereClause}`).get(...queryArgs).count;
+        const opCount = db.prepare(`SELECT COUNT(*) as count FROM OperationKPI ${whereClause}`).get(...queryArgs).count;
+        const qualCount = db.prepare(`SELECT COUNT(*) as count FROM QualityKPI ${whereClause}`).get(...queryArgs).count;
 
         const latestComm = commercial[0] || {};
         const latestOp = operations[0] || {};
@@ -103,7 +148,21 @@ router.get('/:companyId', authMiddleware, (req, res) => {
                 nps: latestQual.nps || 0,
                 satisfaccion: latestQual.satisfaccion || 0,
             },
-            series: { commercial, operations, quality }
+            series: { commercial, operations, quality },
+            pagination: {
+                limit: pageLimit,
+                offset: pageOffset,
+                total: {
+                    commercial: commCount,
+                    operations: opCount,
+                    quality: qualCount
+                },
+                hasMore: {
+                    commercial: commCount > pageOffset + pageLimit,
+                    operations: opCount > pageOffset + pageLimit,
+                    quality: qualCount > pageOffset + pageLimit
+                }
+            }
         });
     } catch (error) {
         console.error('KPI fetch error:', error);
