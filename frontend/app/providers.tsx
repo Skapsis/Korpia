@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { useState } from 'react';
+import { AppProvider } from '@/lib/appContext';
 
 export function Providers({ children }: { children: React.ReactNode }) {
     const [queryClient] = useState(() => new QueryClient({
@@ -15,7 +16,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     }));
 
     return (
-        <QueryClientProvider client={queryClient}>
+        <AppProvider>
+            <QueryClientProvider client={queryClient}>
             {children}
             <Toaster
                 position="top-right"
@@ -32,6 +34,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                     error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
                 }}
             />
-        </QueryClientProvider>
+            </QueryClientProvider>
+        </AppProvider>
     );
 }
