@@ -1,0 +1,47 @@
+services:
+  # ── Backend API (Express + Prisma + SQLite) ────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: korpia-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      DATABASE_URL: "file:/data/dev.db"
+      FRONTEND_URL: "http://localhost:3001"
+      JWT_SECRET: "${JWT_SECRET:-supersecret_cambia_en_produccion}"
+    volumes:
+      # Persistencia de la base de datos SQLite fuera del contenedor
+      - korpia_db:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── Frontend (Next.js standalone) ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "http://backend:3000"
+    container_name: korpia-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      NEXT_PUBLIC_API_URL: "http://backend:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  korpia_db:
+    driver: local

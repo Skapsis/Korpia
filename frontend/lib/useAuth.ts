@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useApp } from '@/lib/appContext';
 
 export interface AuthUser {
     id: string;
@@ -16,39 +17,46 @@ export interface AuthCompany {
     slug: string;
 }
 
+/**
+ * Puente de compatibilidad hacia useApp / appContext.
+ * Ya NO lee solvex_token — usa la sesión centralizada en korpia_auth.
+ * La protección de rutas la gestiona dashboard/layout.tsx.
+ */
 export function useAuth() {
     const router = useRouter();
-    const [user, setUser] = useState<AuthUser | null>(null);
-    const [company, setCompany] = useState<AuthCompany | null>(null);
-    const [token, setToken] = useState<string | null>(null);
-    const [ready, setReady] = useState(false);
+    const { auth, logout: appLogout } = useApp();
 
-    useEffect(() => {
-        const storedToken = localStorage.getItem('solvex_token');
-        const storedUser = localStorage.getItem('solvex_user');
-        const storedCompany = localStorage.getItem('solvex_company');
+    const empresa = auth.empresa ?? 'SOLVEX';
+    const companySlug = empresa.toLowerCase().replace(/\s+/g, '-');
 
-        if (!storedToken) {
-            router.replace('/login');
-            return;
-        }
+    const user: AuthUser | null = auth.isAuthenticated
+        ? {
+              id: 'local',
+              name: auth.userName || 'Usuario',
+              email: '',
+              role: 'user',
+          }
+        : null;
 
-        setToken(storedToken);
-        if (storedUser) {
-            try { setUser(JSON.parse(storedUser)); } catch { /* ignore */ }
-        }
-        if (storedCompany) {
-            try { setCompany(JSON.parse(storedCompany)); } catch { /* ignore */ }
-        }
-        setReady(true);
-    }, [router]);
+    const company: AuthCompany | null = auth.isAuthenticated
+        ? {
+              id: companySlug,
+              name: empresa,
+              slug: companySlug,
+          }
+        : null;
 
     const logout = useCallback(() => {
-        localStorage.removeItem('solvex_token');
-        localStorage.removeItem('solvex_user');
-        localStorage.removeItem('solvex_company');
+        appLogout();
         router.push('/login');
-    }, [router]);
+    }, [appLogout, router]);
 
-    return { user, company, token, ready, logout, companySlug: company?.slug ?? 'solvex' };
+    return {
+        user,
+        company,
+        token: auth.isAuthenticated ? 'local-auth' : null,
+        ready: auth.isAuthenticated,
+        logout,
+        companySlug,
+    };
 }
