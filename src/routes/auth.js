@@ -28,8 +28,22 @@ router.post('/login', async (req, res) => {
 
         const company = db.prepare('SELECT * FROM Company WHERE id = ?').get(user.companyId);
 
+        // Parse areas from JSON string
+        let areas = [];
+        try {
+            areas = JSON.parse(user.areas || '[]');
+        } catch (e) {
+            console.error('Error parsing user areas:', e);
+        }
+
         const token = jwt.sign(
-            { userId: user.id, email: user.email, role: user.role, companyId: user.companyId },
+            { 
+                userId: user.id, 
+                email: user.email, 
+                role: user.role, 
+                companyId: user.companyId,
+                areas 
+            },
             JWT_SECRET,
             { expiresIn: '24h' }
         );
@@ -37,8 +51,19 @@ router.post('/login', async (req, res) => {
         res.json({
             success: true,
             token,
-            user: { id: user.id, name: user.name, email: user.email, role: user.role },
-            company: company ? { id: company.id, name: company.name, slug: company.slug } : null
+            user: { 
+                id: user.id, 
+                name: user.name, 
+                email: user.email, 
+                role: user.role,
+                areas 
+            },
+            company: company ? { id: company.id, name: company.name, slug: company.slug } : null,
+            permissions: {
+                canAccessAdmin: user.role === 'superadmin',
+                canManageKPIs: user.role === 'superadmin' || user.role === 'gerente',
+                areas
+            }
         });
     } catch (error) {
         console.error('Login error:', error);
@@ -55,10 +80,28 @@ router.get('/me', (req, res) => {
     try {
         const token = authHeader.split(' ')[1];
         const payload = jwt.verify(token, JWT_SECRET);
-        const user = db.prepare('SELECT id, email, name, role, companyId FROM User WHERE id = ?').get(payload.userId);
+        const user = db.prepare('SELECT id, email, name, role, companyId, areas FROM User WHERE id = ?').get(payload.userId);
         if (!user) return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
         const company = db.prepare('SELECT id, name, slug FROM Company WHERE id = ?').get(user.companyId);
-        res.json({ success: true, user, company });
+        
+        // Parse areas
+        let areas = [];
+        try {
+            areas = JSON.parse(user.areas || '[]');
+        } catch (e) {
+            console.error('Error parsing user areas:', e);
+        }
+
+        res.json({ 
+            success: true, 
+            user: { ...user, areas },
+            company,
+            permissions: {
+                canAccessAdmin: user.role === 'superadmin',
+                canManageKPIs: user.role === 'superadmin' || user.role === 'gerente',
+                areas
+            }
+        });
     } catch {
         res.status(401).json({ success: false, message: 'Token inválido.' });
     }

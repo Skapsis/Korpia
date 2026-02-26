@@ -34,7 +34,7 @@ export function useAuth() {
               id: 'local',
               name: auth.userName || 'Usuario',
               email: '',
-              role: 'user',
+              role: auth.role ?? 'user',
           }
         : null;
 
@@ -58,5 +58,6 @@ export function useAuth() {
         ready: auth.isAuthenticated,
         logout,
         companySlug,
+        isAdmin: auth.role === 'admin',
     };
 }

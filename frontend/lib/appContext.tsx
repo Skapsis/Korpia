@@ -16,18 +16,27 @@ export const SEMANA_OPTIONS = [
   { value: 'Week 5', label: 'Week 5' },
 ];
 
+export interface Permissions {
+  canAccessAdmin: boolean;
+  canManageKPIs: boolean;
+  areas: string[];
+}
+
 export interface AuthState {
   isAuthenticated: boolean;
   empresa: Empresa | null;
   userName: string;
+  role: 'viewer' | 'gerente' | 'superadmin';
+  permissions: Permissions;
 }
 
 interface AppContextValue {
   auth: AuthState;
   filtroSemana: string;
-  login: (empresa: Empresa, usuario: string) => void;
+  login: (empresa: Empresa, usuario: string, role?: 'viewer' | 'gerente' | 'superadmin', permissions?: Permissions) => void;
   logout: () => void;
   setFiltroSemana: (s: string) => void;
+  updatePermissions: (permissions: Permissions) => void;
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -35,7 +44,17 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 const LS_KEY = 'korpia_auth';
 
-const DEFAULT_AUTH: AuthState = { isAuthenticated: false, empresa: null, userName: '' };
+const DEFAULT_AUTH: AuthState = { 
+  isAuthenticated: false, 
+  empresa: null, 
+  userName: '', 
+  role: 'viewer',
+  permissions: {
+    canAccessAdmin: false,
+    canManageKPIs: false,
+    areas: []
+  }
+};
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -54,12 +73,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setHydrated(true);
   }, []);
 
-  function login(empresa: Empresa, usuario: string) {
+  function login(
+    empresa: Empresa, 
+    usuario: string, 
+    role: 'viewer' | 'gerente' | 'superadmin' = 'viewer',
+    permissions?: Permissions
+  ) {
     // Simula login exitoso sin backend
-    const next: AuthState = { isAuthenticated: true, empresa, userName: usuario };
+    const defaultPermissions: Permissions = {
+      canAccessAdmin: role === 'superadmin',
+      canManageKPIs: role === 'superadmin' || role === 'gerente',
+      areas: role === 'superadmin' ? ['comercial', 'operaciones', 'calidad'] : []
+    };
+
+    const next: AuthState = { 
+      isAuthenticated: true, 
+      empresa, 
+      userName: usuario, 
+      role,
+      permissions: permissions || defaultPermissions
+    };
     setAuth(next);
     setFiltroSemana('Todas');
     localStorage.setItem(LS_KEY, JSON.stringify(next));
+  }
+
+  function updatePermissions(permissions: Permissions) {
+    setAuth(prev => {
+      const updated = { ...prev, permissions };
+      localStorage.setItem(LS_KEY, JSON.stringify(updated));
+      return updated;
+    });
   }
 
   function logout() {
@@ -75,7 +119,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   if (!hydrated) return null;
 
   return (
-    <AppContext.Provider value={{ auth, filtroSemana, login, logout, setFiltroSemana }}>
+    <AppContext.Provider value={{ auth, filtroSemana, login, logout, setFiltroSemana, updatePermissions }}>
       {children}
     </AppContext.Provider>
   );

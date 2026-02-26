@@ -15,10 +15,11 @@ model Company {
   slug      String   @unique
   createdAt DateTime @default(now())
 
-  users          User[]
-  commercialKPIs CommercialKPI[]
-  operationKPIs  OperationKPI[]
-  qualityKPIs    QualityKPI[]
+  users           User[]
+  commercialKPIs  CommercialKPI[]
+  operationKPIs   OperationKPI[]
+  qualityKPIs     QualityKPI[]
+  configurations  AppConfiguration[]
 }
 
 model User {
@@ -26,7 +27,8 @@ model User {
   email     String   @unique
   password  String
   name      String
-  role      String   @default("viewer")
+  role      String   @default("viewer") // 'superadmin', 'gerente', 'viewer'
+  areas     String   @default("[]") // JSON array of areas: ["comercial", "operaciones", "calidad"]
   createdAt DateTime @default(now())
 
   companyId String
@@ -82,4 +84,59 @@ model QualityKPI {
 
   @@index([companyId, period])
   @@index([companyId, createdAt])
+}
+
+// ==================== Configuration-Driven UI Models ====================
+
+model AppConfiguration {
+  id        String   @id @default(cuid())
+  name      String   @unique // e.g. "global", "solvex", "el-mejor"
+  config    String   @default("{}") // JSON configuration object
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+}
+
+model MenuConfiguration {
+  id        String   @id @default(cuid())
+  menuKey   String   @unique // e.g. "comercial", "operaciones", "calidad"
+  label     String   // Display name
+  path      String   // Route path
+  icon      String   @default("📊") // Emoji or icon name
+  enabled   Boolean  @default(true)
+  order     Int      @default(0)
+  minRole   String   @default("viewer") // Minimum role required
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model KPIConfiguration {
+  id          String   @id @default(cuid())
+  area        String   // "comercial", "operaciones", "calidad"
+  kpiKey      String   // Unique identifier for the KPI
+  displayName String   // Display name
+  goal        Float?   // Target/goal value
+  unit        String   @default("") // Unit (%, $, #, etc.)
+  chartType   String   @default("bar") // bar, line, pie, gauge
+  color       String   @default("#3b82f6") // HEX color
+  enabled     Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([area, kpiKey])
+  @@index([area, enabled])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g. "superadmin", "gerente_comercial", "viewer"
+  displayName String   // e.g. "Super Administrador", "Gerente Comercial"
+  permissions String   @default("[]") // JSON array of permissions
+  level       Int      @default(0) // 0=viewer, 1=gerente, 2=superadmin
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

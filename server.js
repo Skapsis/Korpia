@@ -17,9 +17,21 @@ process.on('unhandledRejection', (reason) => {
 });
 
 // Middleware
+const ALLOWED_ORIGINS = [
+    process.env.FRONTEND_URL,
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+].filter(Boolean);
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
-    credentials: true
+    origin: (origin, callback) => {
+        // Permitir requests sin origin (server-to-server, curl, etc.)
+        if (!origin) return callback(null, true);
+        if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+        callback(new Error(`CORS bloqueado para: ${origin}`));
+    },
+    credentials: true,
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -28,15 +40,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // === API Routes ===
-const authRoutes      = require('./src/routes/auth');
-const kpisRoutes      = require('./src/routes/kpis');
-const uploadRoutes    = require('./src/routes/upload');
-const dashboardRoutes = require('./src/routes/dashboard');
+const authRoutes           = require('./src/routes/auth');
+const kpisRoutes           = require('./src/routes/kpis');
+const kpiDefinitionsRoutes = require('./src/routes/kpiDefinitions');
+const uploadRoutes         = require('./src/routes/upload');
+const dashboardRoutes      = require('./src/routes/dashboard');
+const configurationRoutes  = require('./src/routes/configuration');
 
-app.use('/api/auth',      authRoutes);
-app.use('/api/kpis',      kpisRoutes);
-app.use('/api/upload-csv', uploadRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/auth',            authRoutes);
+app.use('/api/kpis',            kpisRoutes);
+app.use('/api/kpi-definitions', kpiDefinitionsRoutes);
+app.use('/api/upload-csv',      uploadRoutes);
+app.use('/api/dashboard',       dashboardRoutes);
+app.use('/api/configuration',   configurationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

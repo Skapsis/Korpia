@@ -32,4 +32,59 @@ api.interceptors.response.use(
     }
 );
 
+// ── KPI Definitions CRUD ──────────────────────────────────────────────────────
+
+export interface KPIDefinition {
+    id: string;
+    empresa: string;
+    area: 'comercial' | 'operaciones' | 'calidad';
+    titulo: string;
+    meta_total: number;
+    logrado_total: number;
+    unidad: string;
+    semanas: { name: string; logrado: number; meta: number }[];
+}
+
+function adminHeaders() {
+    if (typeof window === 'undefined') return {};
+    const auth = localStorage.getItem('korpia_auth');
+    const role = auth ? (JSON.parse(auth).role ?? 'user') : 'user';
+    return { 'x-user-role': role };
+}
+
+export async function fetchKPIDefinitions(empresa?: string): Promise<KPIDefinition[]> {
+    const params = empresa ? `?empresa=${encodeURIComponent(empresa)}` : '';
+    const res = await api.get<{ success: boolean; data: KPIDefinition[] }>(
+        `/api/kpi-definitions${params}`
+    );
+    return res.data.data;
+}
+
+export async function createKPIDefinition(
+    payload: Omit<KPIDefinition, 'id'>
+): Promise<KPIDefinition> {
+    const res = await api.post<{ success: boolean; data: KPIDefinition }>(
+        '/api/kpi-definitions',
+        payload,
+        { headers: adminHeaders() }
+    );
+    return res.data.data;
+}
+
+export async function updateKPIDefinition(
+    id: string,
+    payload: Partial<Omit<KPIDefinition, 'id'>>
+): Promise<KPIDefinition> {
+    const res = await api.put<{ success: boolean; data: KPIDefinition }>(
+        `/api/kpi-definitions/${id}`,
+        payload,
+        { headers: adminHeaders() }
+    );
+    return res.data.data;
+}
+
+export async function deleteKPIDefinition(id: string): Promise<void> {
+    await api.delete(`/api/kpi-definitions/${id}`, { headers: adminHeaders() });
+}
+
 export default api;

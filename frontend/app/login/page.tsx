@@ -23,7 +23,10 @@ export default function LoginPage() {
         }
         setLoading(true);
         await new Promise((r) => setTimeout(r, 700));
-        login(empresa, usuario);
+
+        // Credenciales de administrador: usuario "admin" + contraseña "admin123"
+        const isAdmin = usuario.toLowerCase() === 'admin' && password === 'admin123';
+        login(empresa, usuario, isAdmin ? 'admin' : 'user');
         router.push('/dashboard');
     }
 

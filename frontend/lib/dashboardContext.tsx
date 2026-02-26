@@ -214,22 +214,75 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const triggerFileUpload = () => fileInputRef.current?.click();
 
-  // Auto-load default CSV on mount
+  // ── Sincronización con Backend ────────────────────────────────────────────
+  // Al montar, pide los KPIs al backend y actualiza el resumen general.
+  // Si el backend no responde, el estado se queda en initialData (fallback).
   useEffect(() => {
-    fetch('/datos_solvex_limpio.csv')
-      .then((r) => (r.ok ? r.text() : null))
-      .then((csvText) => {
-        if (!csvText) return;
-        Papa.parse(csvText, {
-          header: true,
-          dynamicTyping: true,
-          skipEmptyLines: true,
-          complete: (results: Papa.ParseResult<CSVRecord>) => {
-            if (results.data && results.data.length > 0) procesarDatosCSV(results.data);
+    // Leer empresa desde localStorage para no depender de un prop
+    let empresa = 'SOLVEX';
+    try {
+      const stored = localStorage.getItem('korpia_auth');
+      if (stored) empresa = JSON.parse(stored).empresa ?? 'SOLVEX';
+    } catch { /* silent */ }
+
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+    fetch(`${API_BASE}/api/kpi-definitions?empresa=${encodeURIComponent(empresa)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json: any) => {
+        const defs: any[] = json?.data ?? [];
+        if (!defs.length) return;
+
+        // Helper: buscar el primer KPI del área que contenga alguna keyword
+        const find = (area: string, ...kws: string[]) =>
+          defs.find((d) =>
+            d.area === area &&
+            kws.some((kw) => d.titulo.toLowerCase().includes(kw.toLowerCase()))
+          );
+
+        const valorPres    = find('comercial',   'valor');
+        const presCantidad = find('comercial',   'cantidad', 'creados');
+        const tiempoEf     = find('operaciones', 'tiempo efectivo');
+        const ordenes      = find('operaciones', 'ordenes', '\u00f3rdenes');
+        const nps          = find('calidad',     'nps', 'satisfaccion');
+        const cancelTec    = find('calidad',     'cancelacion');
+        const deficiencias = find('calidad',     'deficiencia');
+
+        setData((prev) => ({
+          ...prev,
+          comercial: {
+            presupuestos_creados: presCantidad
+              ? { valor: presCantidad.logrado_total, meta: presCantidad.meta_total }
+              : prev.comercial.presupuestos_creados,
+            valor_presupuestos: valorPres
+              ? { valor: valorPres.logrado_total, meta: valorPres.meta_total }
+              : prev.comercial.valor_presupuestos,
           },
-        });
+          operaciones: {
+            tiempo_efectivo: tiempoEf
+              ? { valor: tiempoEf.logrado_total, meta: tiempoEf.meta_total, unidad: '%' }
+              : prev.operaciones.tiempo_efectivo,
+            ordenes_ejecutadas: ordenes
+              ? { valor: ordenes.logrado_total, meta: ordenes.meta_total }
+              : prev.operaciones.ordenes_ejecutadas,
+            evolucion_tiempo: tiempoEf?.semanas?.length
+              ? tiempoEf.semanas.map((s: any) => ({ semana: s.name, meta: s.meta, logrado: s.logrado }))
+              : prev.operaciones.evolucion_tiempo,
+          },
+          calidad: {
+            cancelacion_tecnica: cancelTec
+              ? { valor: cancelTec.logrado_total, meta: cancelTec.meta_total, unidad: '%' }
+              : prev.calidad.cancelacion_tecnica,
+            nps: nps
+              ? { valor: nps.logrado_total, meta: nps.meta_total, unidad: '%' }
+              : prev.calidad.nps,
+            deficiencias_cerradas: deficiencias
+              ? { valor: deficiencias.logrado_total, meta: deficiencias.meta_total, unidad: '%' }
+              : prev.calidad.deficiencias_cerradas,
+          },
+        }));
       })
-      .catch(() => {});
+      .catch(() => { /* fallback silencioso a initialData */ });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

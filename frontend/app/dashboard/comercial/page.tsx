@@ -2,12 +2,13 @@
 
 import KPIDrillDown from '@/components/dashboard/KPIDrillDown';
 import { useApp } from '@/lib/appContext';
-import { useKPIData } from '@/lib/useKPIData';
-import SkeletonLoader from '@/components/SkeletonLoader';
+import { useKPIDefinitions } from '@/lib/useKPIDefinitions';
+import { SkeletonKPI } from '@/components/SkeletonLoader';
+import type { KPIItem } from '@/lib/kpiData';
 
 export default function ComercialDashboard() {
   const { auth } = useApp();
-  const { kpiData, isLoading, isError, refetch } = useKPIData(auth.empresa);
+  const { byArea, isLoading, isError } = useKPIDefinitions(auth.empresa);
 
   if (isLoading) {
     return (
@@ -15,7 +16,7 @@ export default function ComercialDashboard() {
         <p className="text-slate-400 text-sm animate-pulse">
           Cargando tablero para {auth.empresa ?? 'empresa'}...
         </p>
-        <SkeletonLoader />
+        <SkeletonKPI />
       </div>
     );
   }
@@ -24,19 +25,25 @@ export default function ComercialDashboard() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20 text-slate-500">
         <p className="text-base font-medium">Error al cargar los datos comerciales.</p>
-        <button
-          onClick={() => refetch()}
-          className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-all"
-        >
-          Reintentar
-        </button>
+      </div>
+    );
+  }
+
+  const kpis = byArea('comercial') as unknown as KPIItem[];
+
+  if (kpis.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+        <p className="text-4xl mb-3">💰</p>
+        <p className="font-semibold text-slate-600">Sin indicadores comerciales configurados</p>
+        <p className="text-sm mt-1">Un administrador puede agregar KPIs desde ⚙️ Configuración / Admin.</p>
       </div>
     );
   }
 
   return (
     <KPIDrillDown
-      kpis={Object.values(kpiData.comercial)}
+      kpis={kpis}
       title="💰 Comercial"
       subtitle="Contactos efectivos, presupuestos y valor — Periodo"
     />
