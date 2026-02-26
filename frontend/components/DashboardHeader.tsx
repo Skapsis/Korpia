@@ -1,9 +1,9 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Upload, Download, LogOut } from 'lucide-react';
+import { Download, LogOut } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
-import { useApp, SEMANA_OPTIONS } from '@/lib/appContext';
+import { useApp } from '@/lib/appContext';
 import { useDashboard } from '@/lib/dashboardContext';
 import DateRangeFilter from '@/components/DateRangeFilter';
 
@@ -15,8 +15,8 @@ const sectionLabels: Record<string, string> = {
 };
 
 export default function DashboardHeader() {
-  const { auth, filtroSemana, setFiltroSemana, logout } = useApp();
-  const { triggerFileUpload, handleExport } = useDashboard();
+  const { auth, logout } = useApp();
+  const { handleExport } = useDashboard();
   const pathname = usePathname();
   const router   = useRouter();
 
@@ -31,69 +31,60 @@ export default function DashboardHeader() {
   return (
     <>
       <Toaster position="top-right" />
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center px-6 py-4 bg-white border-b border-slate-200 gap-3 sticky top-0 z-30 shadow-sm">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center px-8 py-4 bg-white border-b border-slate-100 gap-4 sticky top-0 z-30 shadow-[0_1px_12px_rgba(0,0,0,0.06)]">
 
+        {/* ── Título + empresa ── */}
         <div className="flex items-center gap-3 min-w-0">
+          {auth.empresa && (
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-600 shadow-lg shadow-indigo-200 shrink-0">
+              <span className="text-white text-base font-black">{auth.empresa.charAt(0)}</span>
+            </div>
+          )}
           <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-lg font-bold text-slate-900 tracking-tight leading-none">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-base font-bold text-slate-900 tracking-tight leading-none">
                 Dashboard Maestro
               </h1>
               {auth.empresa && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-200">
                   {auth.empresa}
                 </span>
               )}
             </div>
-            <p className="text-slate-400 text-xs mt-0.5">
+            <p className="text-slate-400 text-[11px] mt-0.5">
               {sectionName}
               {auth.userName && (
-                <span className="ml-1 text-slate-300"> - {auth.userName}</span>
+                <span className="ml-1.5 text-slate-300 font-medium">{auth.userName}</span>
               )}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={triggerFileUpload}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
-          >
-            <Upload className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Cargar CSV</span>
-          </button>
+        {/* ── Controles ── */}
+        <div className="flex items-center gap-3">
 
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-400 font-medium hidden sm:inline">Periodo:</span>
-            <select
-              value={filtroSemana}
-              onChange={(e) => setFiltroSemana(e.target.value)}
-              className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-sm cursor-pointer hover:border-indigo-300 transition-colors"
-            >
-              {SEMANA_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
+          {/* DateRange */}
           <DateRangeFilter />
 
+          {/* Separador */}
+          <div className="h-7 w-px bg-slate-200" />
+
+          {/* Exportar */}
           <button
             onClick={() => handleExport(sectionKey.replace('/dashboard', '').replace('/', '') || 'general')}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors shadow-md"
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all duration-150 shadow-md shadow-indigo-200"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Exportar</span>
+            <Download className="w-4 h-4" />
+            <span>Exportar Excel</span>
           </button>
 
+          {/* Cerrar sesión */}
           <button
             onClick={handleLogout}
             title="Cerrar Sesion"
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-rose-500 hover:bg-rose-50 hover:border-rose-200 transition-colors shadow-sm"
+            className="group flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-all duration-150 shadow-sm"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <LogOut className="w-4 h-4 text-slate-400 group-hover:text-rose-500 transition-colors" />
             <span className="hidden sm:inline">Salir</span>
           </button>
         </div>
