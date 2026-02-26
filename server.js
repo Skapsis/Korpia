@@ -28,13 +28,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // === API Routes ===
-const authRoutes = require('./src/routes/auth');
-const kpisRoutes = require('./src/routes/kpis');
-const uploadRoutes = require('./src/routes/upload');
+const authRoutes      = require('./src/routes/auth');
+const kpisRoutes      = require('./src/routes/kpis');
+const uploadRoutes    = require('./src/routes/upload');
+const dashboardRoutes = require('./src/routes/dashboard');
 
-app.use('/api/auth', authRoutes);
-app.use('/api/kpis', kpisRoutes);
+app.use('/api/auth',      authRoutes);
+app.use('/api/kpis',      kpisRoutes);
 app.use('/api/upload-csv', uploadRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
