@@ -7,12 +7,96 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
+// ==================== BI Dinámico (Configuration-Driven) — Modelos principales ====================
+// Mapeo conceptual: Empresa → Company | Usuario → User | Tablero | Indicador | DatoKPI
+
+model Tablero {
+  id          String   @id @default(cuid())
+  empresaId   String
+  nombre      String
+  descripcion String?  // Subtítulo opcional visible en el header del tablero
+  icono       String   @default("📊")
+  orden       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  empresa    Company    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  indicadores Indicador[]
+
+  @@index([empresaId, orden])
+}
+
+model Indicador {
+  id              String   @id @default(cuid())
+  tableroId       String
+  titulo          String
+  descripcion     String?  // Descripción corta del KPI
+  tipoGrafico     String   @default("bar")   // "bar" | "line" | "combo"
+  unidad          String   @default("num")   // "$" | "%" | "num"
+  metaGlobal      Float    @default(0)
+  colorPrincipal  String   @default("#6366f1")
+  esMejorMayor    Boolean  @default(true)    // true=Mayor es mejor, false=Menor es mejor
+  orden               Int      @default(0)
+  gridX               Int      @default(0)  // Posición en grid del dashboard
+  gridY               Int      @default(0)
+  gridW               Int      @default(4)  // Ancho en columnas del grid
+  gridH               Int      @default(3)  // Alto en filas del grid
+  usaDatosDinamicos   Boolean  @default(false)  // true = ejecutar consultaSql en vivo (SQL Server)
+  cadenaConexion     String?  // Cadena de conexión para motor SQL en vivo (ej. SQL Server)
+  fuenteDatosId      String?  // Opcional: origen externo para sincronización
+  consultaSql         String?  // Query SQL (debe retornar periodo, logrado, opcionalmente meta)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tablero      Tablero       @relation(fields: [tableroId], references: [id], onDelete: Cascade)
+  fuenteDatos  FuenteDatos?  @relation(fields: [fuenteDatosId], references: [id], onDelete: SetNull)
+  datos        DatoKPI[]
+
+  @@index([tableroId, orden])
+  @@index([fuenteDatosId])
+}
+
+/// Fuente de datos externa (Postgres, MySQL, etc.) para sincronización de indicadores.
+model FuenteDatos {
+  id              String   @id @default(cuid())
+  empresaId       String
+  nombre          String   // Ej. "Warehouse Postgres", "CRM MySQL"
+  tipo            String   // 'POSTGRES' | 'MYSQL'
+  cadenaConexion  String   // postgresql://user:pass@host:5432/db o mysql2://...
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  empresa     Company     @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  indicadores Indicador[]
+
+  @@index([empresaId])
+}
+
+/// Datos por periodo de un Indicador (valor logrado y meta específica opcional).
+model DatoKPI {
+  id                  String   @id @default(cuid())
+  indicadorId         String
+  periodo             String   // "Week 1", "Enero", "Q1 2026", etc.
+  valorLogrado        Float    @default(0)
+  valorMetaEspecifica Float?   // null = usar metaGlobal del indicador
+  createdAt           DateTime @default(now())
+
+  indicador Indicador @relation(fields: [indicadorId], references: [id], onDelete: Cascade)
+
+  @@index([indicadorId])
+  @@unique([indicadorId, periodo])
+  @@map("IndicadorDato") // Mantiene nombre de tabla existente en SQLite (sin pérdida de datos)
+}
+
+/// Empresa (id, nombre → name, slug)
 model Company {
   id        String   @id @default(cuid())
-  name      String
+  name      String   // nombre
   slug      String   @unique
+  logo      String?
   createdAt DateTime @default(now())
 
   users           User[]
@@ -20,8 +104,11 @@ model Company {
   operationKPIs   OperationKPI[]
   qualityKPIs     QualityKPI[]
   configurations  AppConfiguration[]
+  tableros        Tablero[]
+  fuentesDatos    FuenteDatos[]
 }
 
+/// Usuario (id, email, password, role, empresaId → companyId)
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -31,7 +118,7 @@ model User {
   areas     String   @default("[]") // JSON array of areas: ["comercial", "operaciones", "calidad"]
   createdAt DateTime @default(now())
 
-  companyId String
+  companyId String   // empresaId
   company   Company @relation(fields: [companyId], references: [id])
 }
 
