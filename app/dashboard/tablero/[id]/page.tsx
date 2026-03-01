@@ -1,44 +1,75 @@
-'use client';
+import { prisma } from '@/lib/prisma';
+import { notFound } from 'next/navigation';
+import { TableroViewWithToolbar } from '@/components/dashboard/TableroViewWithToolbar';
+import type { IndicadorConGrid } from '@/components/dashboard/DraggableCanvas';
 
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
-import { DynamicDashboard } from '@/components/dashboard/DynamicDashboard';
-
-type ViewMode = 'cards' | 'charts' | 'full';
-
-export default function TableroDynamicPage() {
-    const { id } = useParams<{ id: string }>();
-    const [mode, setMode] = useState<ViewMode>('cards');
-
-    if (!id) return null;
-
-    return (
-        <div className="flex flex-col h-full">
-            {/* Barra de modos de vista */}
-            <div className="flex items-center gap-1 px-8 pt-6 pb-0">
-                {([
-                    { key: 'cards',  label: '🃏 Resumen' },
-                    { key: 'charts', label: '📈 Gráficos' },
-                    { key: 'full',   label: '🔍 Completo' },
-                ] as { key: ViewMode; label: string }[]).map(({ key, label }) => (
-                    <button
-                        key={key}
-                        onClick={() => setMode(key)}
-                        className={`px-4 py-1.5 text-xs font-bold rounded-full transition-all ${
-                            mode === key
-                                ? 'bg-blue-600 text-white shadow'
-                                : 'bg-white border border-slate-200 text-slate-500 hover:border-blue-300'
-                        }`}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Dashboard dinámico */}
-            <DynamicDashboard tableroId={id} mode={mode} />
-        </div>
-    );
+interface PageProps {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ start?: string; end?: string }>;
 }
 
+/** Vista del tablero con Lienzo Drag & Drop (react-grid-layout) y Barra de Herramientas (react-to-print).
+ *  Ruta usada por el Sidebar: /dashboard/tablero/:id */
+export default async function TableroPage({ params, searchParams }: PageProps) {
+  const { id: tableroId } = await params;
+  const { start, end } = await searchParams;
 
+  const tablero = await prisma.tablero.findUnique({
+    where: { id: tableroId },
+    include: {
+      empresa: true,
+      indicadores: {
+        orderBy: { orden: 'asc' },
+        include: {
+          datos: { orderBy: { periodo: 'asc' } },
+        },
+      },
+    },
+  });
+
+  if (!tablero) notFound();
+
+  const indicadores: IndicadorConGrid[] = tablero.indicadores.map((ind) => ({
+    id: ind.id,
+    tableroId: ind.tableroId,
+    titulo: ind.titulo,
+    descripcion: ind.descripcion ?? undefined,
+    tipoGrafico: (ind.tipoGrafico || 'bar') as 'bar' | 'line' | 'combo' | 'pie' | 'area' | 'gauge' | 'scorecard' | 'table',
+    unidad: ind.unidad || 'num',
+    metaGlobal: ind.metaGlobal,
+    colorPrincipal: ind.colorPrincipal || '#6366f1',
+    esMejorMayor: ind.esMejorMayor,
+    orden: ind.orden,
+    gridX: ind.gridX ?? 0,
+    gridY: ind.gridY ?? 0,
+    gridW: ind.gridW ?? 4,
+    gridH: ind.gridH ?? 3,
+    usaDatosDinamicos: ind.usaDatosDinamicos ?? false,
+    cadenaConexion: ind.cadenaConexion ?? null,
+    consultaSql: ind.consultaSql ?? null,
+    datos: ind.datos.map((d) => ({
+      id: d.id,
+      indicadorId: d.indicadorId,
+      periodo: d.periodo,
+      valorLogrado: d.valorLogrado,
+      valorMetaEspecifica: d.valorMetaEspecifica,
+      createdAt: d.createdAt.toISOString(),
+    })),
+    createdAt: ind.createdAt.toISOString(),
+  }));
+
+  return (
+    <TableroViewWithToolbar
+      tablero={{
+        id: tablero.id,
+        nombre: tablero.nombre,
+        icono: tablero.icono,
+        descripcion: tablero.descripcion,
+        empresa: tablero.empresa,
+      }}
+      indicadores={indicadores}
+      start={start ?? undefined}
+      end={end ?? undefined}
+    />
+  );
+}

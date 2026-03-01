@@ -5,12 +5,12 @@ import type { IndicadorConGrid } from '@/components/dashboard/DraggableCanvas';
 
 interface PageProps {
   params: Promise<{ tableroId: string }>;
-  searchParams: Promise<{ filtro?: string }>;
+  searchParams: Promise<{ start?: string; end?: string }>;
 }
 
 export default async function VisualizadorTableroPage({ params, searchParams }: PageProps) {
   const { tableroId } = await params;
-  const { filtro } = await searchParams;
+  const { start, end } = await searchParams;
 
   const tablero = await prisma.tablero.findUnique({
     where: { id: tableroId },
@@ -33,7 +33,7 @@ export default async function VisualizadorTableroPage({ params, searchParams }: 
     tableroId: ind.tableroId,
     titulo: ind.titulo,
     descripcion: ind.descripcion ?? undefined,
-    tipoGrafico: (ind.tipoGrafico || 'bar') as 'bar' | 'line' | 'combo' | 'pie' | 'area' | 'gauge' | 'scorecard',
+    tipoGrafico: (ind.tipoGrafico || 'bar') as 'bar' | 'line' | 'combo' | 'pie' | 'area' | 'gauge' | 'scorecard' | 'table',
     unidad: ind.unidad || 'num',
     metaGlobal: ind.metaGlobal,
     colorPrincipal: ind.colorPrincipal || '#6366f1',
@@ -67,7 +67,8 @@ export default async function VisualizadorTableroPage({ params, searchParams }: 
         empresa: tablero.empresa,
       }}
       indicadores={indicadores}
-      filtroGlobal={filtro ?? undefined}
+      start={start ?? undefined}
+      end={end ?? undefined}
     />
   );
 }

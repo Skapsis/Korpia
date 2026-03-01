@@ -34,17 +34,17 @@ function buildChartData(indicador: Indicador): ChartDataPoint[] {
     }));
 }
 
-/** Tooltip personalizado */
+/** Tooltip personalizado — Enterprise: bordes sutiles, texto slate-900/500 */
 function CustomTooltip({ active, payload, label, unidad }: any) {
     if (!active || !payload?.length) return null;
     return (
-        <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-lg text-sm">
-            <p className="font-semibold text-slate-700 mb-2">{label}</p>
+        <div className="bg-white border border-slate-200/80 rounded-xl p-3 text-sm">
+            <p className="font-semibold text-slate-900 mb-2">{label}</p>
             {payload.map((p: any) => (
                 <div key={p.dataKey} className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
                     <span className="text-slate-500 capitalize">{p.name}:</span>
-                    <span className="font-bold" style={{ color: p.color }}>
+                    <span className="font-bold text-slate-900" style={{ color: p.color }}>
                         {formatValue(p.value, unidad)}
                     </span>
                 </div>
@@ -63,7 +63,7 @@ function ChartRendererContent({ indicador, height = 260 }: ChartRendererProps) {
 
     if (!data.length) {
         return (
-            <div className="flex items-center justify-center h-full text-slate-400 text-sm" style={{ minHeight: height }}>
+            <div className="flex items-center justify-center h-full text-slate-500 text-sm" style={{ minHeight: height }}>
                 Sin datos
             </div>
         );
@@ -129,23 +129,26 @@ function ChartRendererContent({ indicador, height = 260 }: ChartRendererProps) {
         );
     }
 
-    // ── Pie Chart ──────────────────────────────────────────────────────────────
+    // ── Pie Chart (torta/anillo) ─────────────────────────────────────────────────
     if (indicador.tipoGrafico === 'pie') {
-        const pieData = data.map((d) => ({ name: d.periodo, value: d.logrado }));
+        const pieData = data.map((d) => ({ periodo: d.periodo, logrado: d.logrado }));
+        const colors = [color, metaColor, '#a5b4fc', '#86efac', '#fcd34d', '#f87171'];
         return (
             <ResponsiveContainer width="100%" height={height}>
                 <PieChart>
                     <Pie
                         data={pieData}
-                        dataKey="value"
-                        nameKey="name"
+                        dataKey="logrado"
+                        nameKey="periodo"
                         cx="50%"
                         cy="50%"
-                        outerRadius={Math.min(height * 0.35, 80)}
-                        label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                        innerRadius={60}
+                        outerRadius={80}
+                        fill={color}
+                        label={(props: { name?: string; percent?: number }) => `${props.name ?? ''} ${((props.percent ?? 0) * 100).toFixed(0)}%`}
                     >
                         {pieData.map((_, i) => (
-                            <Cell key={i} fill={[color, metaColor, '#a5b4fc', '#86efac', '#fcd34d', '#f87171'][i % 6]} />
+                            <Cell key={i} fill={colors[i % colors.length]} />
                         ))}
                     </Pie>
                     <Tooltip content={<CustomTooltip unidad={indicador.unidad} />} />
@@ -169,13 +172,44 @@ function ChartRendererContent({ indicador, height = 260 }: ChartRendererProps) {
         );
     }
 
+    // ── Tabla de detalles (sin Recharts) ───────────────────────────────────────
+    if (indicador.tipoGrafico === 'table' && data.length > 0) {
+        const keys = Object.keys(data[0]);
+        return (
+            <div className="overflow-auto h-full w-full rounded-xl border border-slate-200 bg-white shadow-sm" style={{ minHeight: height }}>
+                <table className="w-full border-collapse">
+                    <thead className="bg-slate-50 sticky top-0 z-[1]">
+                        <tr>
+                            {keys.map((k) => (
+                                <th key={k} className="text-left text-xs uppercase text-slate-500 tracking-wider py-3 px-4 border-b border-slate-200 whitespace-nowrap">
+                                    {k}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {data.map((row, i) => (
+                            <tr key={i} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
+                                {keys.map((k) => (
+                                    <td key={k} className="text-sm text-slate-700 py-3 px-4">
+                                        {row[k as keyof typeof row] != null ? String(row[k as keyof typeof row]) : '—'}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        );
+    }
+
     // ── Scorecard (tarjeta de número) — normalmente se renderiza en DraggableCanvas ──
     if (indicador.tipoGrafico === 'scorecard') {
         const first = data[0];
         const valor = first?.logrado ?? 0;
         return (
             <div className="flex flex-col items-center justify-center w-full h-full" style={{ minHeight: height }}>
-                <span className="text-5xl font-bold text-slate-800 tabular-nums">
+                <span className="text-5xl font-bold text-slate-900 tabular-nums">
                     {formatValue(valor, indicador.unidad)}
                 </span>
                 <span className="text-sm text-slate-500 mt-2">{indicador.titulo}</span>
@@ -206,10 +240,10 @@ function ChartRendererContent({ indicador, height = 260 }: ChartRendererProps) {
                         />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-2xl font-bold text-slate-800">
+                        <span className="text-2xl font-bold text-slate-900">
                             {formatValue(logrado, indicador.unidad)}
                         </span>
-                        <span className="text-xs text-slate-400">de {formatValue(meta, indicador.unidad)}</span>
+                        <span className="text-xs text-slate-500">de {formatValue(meta, indicador.unidad)}</span>
                         <span className="text-sm font-semibold mt-0.5" style={{ color: strokeColor }}>{Math.round(pct)}%</span>
                     </div>
                 </div>

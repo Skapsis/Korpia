@@ -31,48 +31,46 @@ export default function DashboardHeader() {
   return (
     <>
       <Toaster position="top-right" />
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center px-8 py-4 bg-white border-b border-slate-100 gap-4 sticky top-0 z-30 shadow-[0_1px_12px_rgba(0,0,0,0.06)]">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center px-8 py-5 bg-white border-b border-slate-200/80 gap-5 sticky top-0 z-30">
 
-        {/* ── Título + empresa ── */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-4 min-w-0">
           {auth.empresa && (
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-600 shadow-lg shadow-indigo-200 shrink-0">
-              <span className="text-white text-base font-black">{auth.empresa.charAt(0)}</span>
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-600 shrink-0">
+              <span className="text-white text-base font-semibold">{auth.empresa.charAt(0)}</span>
             </div>
           )}
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-base font-bold text-slate-900 tracking-tight leading-none">
+              <h1 className="section-title leading-none">
                 Dashboard Maestro
               </h1>
               {auth.empresa && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-200">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-600 border border-indigo-200/80">
                   {auth.empresa}
                 </span>
               )}
             </div>
-            <p className="text-slate-400 text-[11px] mt-0.5">
+            <p className="label-mini mt-1.5">
               {sectionName}
               {auth.userName && (
-                <span className="ml-1.5 text-slate-300 font-medium">{auth.userName}</span>
+                <span className="ml-1.5 font-medium normal-case text-slate-500">{auth.userName}</span>
               )}
             </p>
           </div>
         </div>
 
-        {/* ── Controles ── */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
 
           {/* DateRange */}
           <DateRangeFilter />
 
           {/* Separador */}
-          <div className="h-7 w-px bg-slate-200" />
+          <div className="h-7 w-px bg-slate-200/80" />
 
           {/* Exportar */}
           <button
             onClick={() => handleExport(sectionKey.replace('/dashboard', '').replace('/', '') || 'general')}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all duration-150 shadow-md shadow-indigo-200"
+            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 transition-all duration-150 border border-indigo-600"
           >
             <Download className="w-4 h-4" />
             <span>Exportar Excel</span>
@@ -82,9 +80,9 @@ export default function DashboardHeader() {
           <button
             onClick={handleLogout}
             title="Cerrar Sesion"
-            className="group flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-all duration-150 shadow-sm"
+            className="group flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200/80 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-all duration-150"
           >
-            <LogOut className="w-4 h-4 text-slate-400 group-hover:text-rose-500 transition-colors" />
+            <LogOut className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
             <span className="hidden sm:inline">Salir</span>
           </button>
         </div>

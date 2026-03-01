@@ -2,18 +2,27 @@
 
 import * as sql from 'mssql';
 
+export interface FiltrosConsulta {
+  start?: string;
+  end?: string;
+}
+
 /**
  * Ejecuta una consulta contra SQL Server usando la cadena de conexión proporcionada.
- * Si se pasa filtroGlobal, reemplaza {{FILTRO_GLOBAL}} en la query por ese valor.
+ * Sustituye en la query: {{FECHA_INICIO}} por filtros.start y {{FECHA_FIN}} por filtros.end.
  */
 export async function ejecutarConsulta(
   cadenaConexion: string,
   query: string,
-  filtroGlobal?: string
+  filtros?: FiltrosConsulta
 ): Promise<{ success: true; data: Record<string, unknown>[] } | { error: string }> {
-  const queryFinal = filtroGlobal != null && filtroGlobal !== ''
-    ? query.replace(/\{\{FILTRO_GLOBAL\}\}/g, filtroGlobal)
-    : query;
+  let queryFinal = query;
+  if (filtros?.start != null && filtros.start !== '') {
+    queryFinal = queryFinal.replace(/\{\{FECHA_INICIO\}\}/g, filtros.start);
+  }
+  if (filtros?.end != null && filtros.end !== '') {
+    queryFinal = queryFinal.replace(/\{\{FECHA_FIN\}\}/g, filtros.end);
+  }
 
   let pool: sql.ConnectionPool | null = null;
   try {

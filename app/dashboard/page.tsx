@@ -1,56 +1,63 @@
-'use client';
-
-import { useApp } from '@/lib/appContext';
-import { DynamicDashboard } from '@/components/dashboard/DynamicDashboard';
+import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 /**
- * Motor de renderizado dinámico: lee el tablero seleccionado desde systemConfig
- * (GET /api/config/dynamic) y hace .map() de sus Indicadores → ChartRenderer.
- * Sin componentes estáticos (Comercial, Operaciones, etc.).
+ * Pantalla principal del dashboard: Resumen de Tableros.
+ * Muestra una cuadrícula de tarjetas; cada una enlaza al tablero (drill-down).
  */
-export default function DashboardPage() {
-    const { systemConfig } = useApp();
-    const tableros = systemConfig?.tableros ?? [];
-    const firstTablero = tableros[0];
+export default async function DashboardPage() {
+  const tableros = await prisma.tablero.findMany({
+    orderBy: [{ orden: 'asc' }, { nombre: 'asc' }],
+    include: {
+      empresa: { select: { name: true } },
+      _count: { select: { indicadores: true } },
+    },
+  });
 
-    if (!systemConfig) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[320px] gap-4">
-                <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                <p className="text-slate-500 text-sm">Cargando configuración…</p>
-            </div>
-        );
-    }
-
-    if (tableros.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[320px] text-center px-4">
-                <span className="text-5xl">📊</span>
-                <h2 className="text-xl font-bold text-slate-800 mt-4">Sin tableros configurados</h2>
-                <p className="text-slate-500 text-sm mt-2 max-w-sm">
-                    Configura tableros e indicadores en Administración para ver el dashboard dinámico.
-                </p>
-                <Link
-                    href="/dashboard/config"
-                    className="mt-6 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700"
-                >
-                    Ir a Administración
-                </Link>
-            </div>
-        );
-    }
-
-    // Renderizado dinámico: primer tablero con sus indicadores → ChartRenderer (vía DynamicDashboard)
+  if (tableros.length === 0) {
     return (
-        <div className="flex flex-col h-full">
-            <div className="flex items-center gap-1 px-0 pt-0 pb-2">
-                <p className="text-xs text-slate-400">
-                    Vista del tablero <strong className="text-slate-600">{firstTablero.nombre}</strong>.
-                    Más tableros en el menú lateral.
-                </p>
-            </div>
-            <DynamicDashboard tableroId={firstTablero.id} mode="charts" />
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[360px] text-center px-8 py-12">
+        <span className="text-5xl">📊</span>
+        <h2 className="section-title mt-6">Sin tableros configurados</h2>
+        <p className="text-slate-500 text-sm mt-3 max-w-sm">
+          Configura tableros e indicadores en Administración para ver el dashboard dinámico.
+        </p>
+        <Link
+          href="/dashboard/config"
+          className="mt-8 px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 border border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 transition-colors"
+        >
+          Ir a Administración
+        </Link>
+      </div>
     );
+  }
+
+  return (
+    <div className="p-8 md:p-10">
+      <header className="mb-10">
+        <h1 className="section-title">Tableros</h1>
+        <p className="label-mini mt-2">Selecciona un tablero para ver sus indicadores</p>
+      </header>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        {tableros.map((tablero) => (
+          <Link
+            key={tablero.id}
+            href={`/dashboard/tablero/${tablero.id}`}
+            className="block p-8 bg-white rounded-2xl border border-slate-200/80 hover:border-slate-300/80 hover:-translate-y-0.5 transition-all text-left"
+          >
+            <span className="text-4xl" aria-hidden>{tablero.icono}</span>
+            <h2 className="section-title mt-4">{tablero.nombre}</h2>
+            {tablero.descripcion && (
+              <p className="text-slate-500 text-sm mt-2 line-clamp-2">{tablero.descripcion}</p>
+            )}
+            <p className="label-mini mt-4">
+              {tablero.empresa.name} · {tablero._count.indicadores} indicador{tablero._count.indicadores !== 1 ? 'es' : ''}
+            </p>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
 }

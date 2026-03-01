@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafafa;
+  --foreground: #0f172a;
 }
 
 @theme inline {
@@ -12,17 +12,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Inter, system-ui, sans-serif;
 }
 
 @keyframes fadeIn {
@@ -34,9 +27,19 @@ body {
   animation: fadeIn 0.25s ease-out both;
 }
 
-/* Config-Driven UI helpers */
+/* Enterprise B2B: bordes sutiles, acento indigo */
 .input-base {
-  @apply w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all;
+  @apply w-full border border-slate-200/80 rounded-xl px-4 py-2.5 text-sm text-slate-900 bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all;
+}
+
+/* Tipografía: títulos de sección */
+.section-title {
+  @apply text-lg font-semibold tracking-tight text-slate-800;
+}
+
+/* Etiquetas y mini-títulos (muy usado en dashboards) */
+.label-mini {
+  @apply text-xs font-medium uppercase tracking-wider text-slate-500;
 }
 
 /* ── Impresión: solo lienzo de gráficos, sin sidebar ni barra de herramientas ── */

@@ -30,7 +30,11 @@ const TIPO_GRAFICO_OPTS = [
     { value: 'combo', label: '🔀 Combinado' },
     { value: 'pie', label: '🥧 Circular' },
     { value: 'gauge', label: '🎯 Gauge' },
+    { value: 'scorecard', label: '🔢 Scorecard' },
+    { value: 'table', label: '📋 Tabla' },
 ];
+
+type TipoGrafico = 'bar' | 'line' | 'combo' | 'pie' | 'area' | 'gauge' | 'scorecard' | 'table';
 
 const UNIDAD_OPTS = [
     { value: 'num', label: 'Número' },
@@ -48,9 +52,9 @@ const defaultTableroForm = () => ({
     orden: 1,
 });
 
-const defaultIndicadorForm = () => ({
+const defaultIndicadorForm = (): { titulo: string; tipoGrafico: TipoGrafico; unidad: string; metaGlobal: number; colorPrincipal: string; esMejorMayor: boolean; orden: number } => ({
     titulo: '',
-    tipoGrafico: 'bar' as 'bar' | 'line' | 'combo' | 'pie' | 'area' | 'gauge',
+    tipoGrafico: 'bar',
     unidad: 'num',
     metaGlobal: 100,
     colorPrincipal: '#3B82F6',
@@ -635,7 +639,7 @@ export default function ConfigPage() {
                                         <select
                                             className="input-base"
                                             value={indicadorForm.tipoGrafico}
-                                            onChange={(e) => setIndicadorForm({ ...indicadorForm, tipoGrafico: e.target.value as 'bar' | 'line' | 'combo' | 'pie' | 'area' | 'gauge' })}
+                                            onChange={(e) => setIndicadorForm({ ...indicadorForm, tipoGrafico: e.target.value as TipoGrafico })}
                                         >
                                             {TIPO_GRAFICO_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                                         </select>

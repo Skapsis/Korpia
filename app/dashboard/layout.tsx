@@ -21,15 +21,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     if (!auth.isAuthenticated) {
         return (
-            <div className="flex items-center justify-center h-screen bg-slate-50">
-                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <div className="flex items-center justify-center h-screen bg-[#FAFAFA]">
+                <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }
 
     return (
         <DashboardProvider>
-            <div className="flex h-screen w-full overflow-hidden bg-slate-50 relative">
+            <div className="flex h-screen w-full overflow-hidden bg-[#FAFAFA] relative">
                 {/* Sidebar with transition */}
                 <div className={`transition-all duration-300 ease-in-out flex-shrink-0 ${sidebarVisible ? 'w-64' : 'w-0 overflow-hidden'}`}>
                     <Sidebar />
@@ -45,7 +45,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         {/* Presentation Toggle Button */}
                         <button
                             onClick={() => setSidebarVisible(!sidebarVisible)}
-                            className="absolute top-4 left-4 z-50 p-2 bg-white border border-slate-200 rounded-xl shadow-lg hover:bg-slate-50 transition-all text-slate-400 hover:text-slate-600"
+                            className="absolute top-4 left-4 z-50 p-2 bg-white border border-slate-200/80 rounded-xl hover:bg-slate-50 transition-all text-slate-500 hover:text-slate-900"
                             title={sidebarVisible ? 'Modo Presentación' : 'Mostrar Menú'}
                         >
                             {sidebarVisible ? (
@@ -59,7 +59,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             )}
                         </button>
 
-                        <div className={`${!sidebarVisible ? 'pl-12' : ''} transition-all duration-300 p-6 md:p-8`}>
+                        <div className={`${!sidebarVisible ? 'pl-12' : ''} transition-all duration-300 p-8 md:p-10`}>
                             {children}
                         </div>
                     </main>

@@ -20,7 +20,7 @@ export interface Indicador {
     tableroId: string;
     titulo: string;
     descripcion?: string | null;
-    tipoGrafico: 'bar' | 'line' | 'combo' | 'pie' | 'area' | 'gauge' | 'scorecard';
+    tipoGrafico: 'bar' | 'line' | 'combo' | 'pie' | 'area' | 'gauge' | 'scorecard' | 'table';
     unidad: 'num' | '$' | '%' | 'USD' | 'pct' | string;
     metaGlobal: number;
     colorPrincipal: string;
@@ -129,7 +129,7 @@ export async function deleteTablero(id: string): Promise<void> {
 export async function createIndicador(data: {
     tableroId: string;
     titulo: string;
-    tipoGrafico?: 'bar' | 'line' | 'combo' | 'pie' | 'area' | 'gauge' | 'scorecard' | 'scorecard';
+    tipoGrafico?: 'bar' | 'line' | 'combo' | 'pie' | 'area' | 'gauge' | 'scorecard' | 'table';
     unidad?: string;
     metaGlobal?: number;
     colorPrincipal?: string;
@@ -144,7 +144,7 @@ export async function updateIndicador(
     id: string,
     data: Partial<{
         titulo: string;
-        tipoGrafico: 'bar' | 'line' | 'combo' | 'pie' | 'area' | 'gauge' | 'scorecard';
+        tipoGrafico: 'bar' | 'line' | 'combo' | 'pie' | 'area' | 'gauge' | 'scorecard' | 'table';
         unidad: string;
         metaGlobal: number;
         colorPrincipal: string;
