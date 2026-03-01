@@ -22,8 +22,7 @@ Tu aplicación SaaS de análisis de datos está **completamente funcional** y li
   - `GET /api/auth/me` - Verificación de sesión
   - `GET /api/kpis/:companySlug` - Obtener KPIs de una empresa
   - `POST /api/kpis/:companySlug/commercial` - Crear presupuesto
-  - `POST /api/upload-csv` - Subir y procesar archivos CSV
-  - `GET /api/upload-csv/template/:type` - Descargar plantillas CSV
+  - `GET /api/config/public/:slug` - Config pública (tableros, indicadores, datos)
 
 ### ✅ 3. Base de Datos (SQLite + Prisma)
 - **Esquema completo** con 5 modelos:
@@ -40,8 +39,7 @@ Tu aplicación SaaS de análisis de datos está **completamente funcional** y li
 - ✅ Dashboard con KPIs y gráficas de datos reales
 - ✅ Página de Presupuestos con modal para crear nuevos
 - ✅ Página de Operaciones con métricas en tiempo real
-- ✅ Sistema de carga de archivos CSV con drag & drop
-- ✅ Descarga de plantillas CSV
+- ✅ Administración unificada (tableros, indicadores, datos)
 - ✅ Vistas de detalle por tipo (comercial, operación, calidad)
 - ✅ Logout funcional
 - ✅ Botones "en desarrollo" muestran toast notifications
@@ -77,9 +75,12 @@ npm run dev:frontend
 ### 3️⃣ Credenciales de Prueba
 
 ```
-Email: admin@solvex.com
-Password: admin123
+Empresa: SOLVEX
+Usuario: admin
+Contraseña: admin123
 ```
+
+> **Importante:** En "Usuario" escribe solo `admin`, no el email completo.
 
 ---
 
@@ -87,30 +88,22 @@ Password: admin123
 
 ### Paso 1: Login
 1. Ve a http://localhost:3001
-2. Ingresa las credenciales de prueba
-3. Serás redirigido automáticamente al Dashboard
+2. Selecciona empresa SOLVEX
+3. Usuario: `admin` | Contraseña: `admin123`
+4. Serás redirigido al Dashboard
 
-### Paso 2: Navegar por el Dashboard
-- Ver KPIs en tiempo real de SOLVEX
-- Explorar gráficas de rendimiento comercial y operativo
-- Hacer clic en "Cargar Datos" para subir CSVs
+### Paso 2: Ver Tableros
+- Los tableros (Comercial, Operaciones, Calidad) aparecen en el menú lateral
+- Haz clic en cualquier tablero para ver sus indicadores y gráficos
+- Los datos vienen precargados del seed
 
-### Paso 3: Gestionar Presupuestos
-1. Click en "Presupuestos" en el sidebar
-2. Ver tabla con histórico de períodos
-3. Click en "+ Nuevo Presupuesto" para crear uno manualmente
-4. Completar el formulario y guardar
+### Paso 3: Administración (Superadmin)
+1. Click en "Administración" en el sidebar
+2. Gestiona **Tableros**, **Indicadores** y **Datos** desde una sola pantalla
+3. Crea tableros, agrega KPIs, edita valores por período
+4. Los cambios se reflejan inmediatamente en el menú y dashboards
 
-### Paso 4: Subir Datos CSV
-1. Ir a "Carga de Datos"
-2. Seleccionar empresa (SOLVEX o EL MEJOR)
-3. Seleccionar tipo (Comercial, Operación, Calidad)
-4. Descargar plantilla CSV si es necesario
-5. Arrastrar archivo o hacer click para seleccionar
-6. Click en "Subir y Procesar"
-7. Los datos nuevos aparecerán en el Dashboard
-
-### Paso 5: Ver Detalles
+### Paso 4: Ver Detalles
 - Desde el Dashboard, hacer click en cualquier KPI Card
 - Verás gráficas detalladas y tablas con los datos completos
 
