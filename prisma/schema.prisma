@@ -227,3 +227,47 @@ model Role {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// ==================== KPI Wizard — Modelo para Create New KPI ====================
+
+model Folder {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  kpis KPI[]
+
+  @@index([name])
+}
+
+model KPI {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  category       String   @default("Financial")
+  unitType       String   @default("Currency (USD)")
+  trendDirection String   @default("up") // "up" | "down"
+  folderId       String?
+  createdAt      DateTime @default(now())
+
+  folder Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([category])
+  @@index([folderId])
+}
+
+// ==================== BI Studio — Datos de ventas para gráficos ====================
+
+model FinancialRecord {
+  id      String   @id @default(cuid())
+  date    DateTime
+  revenue Float
+  target  Float
+  region  String
+  product String
+  createdAt DateTime @default(now())
+
+  @@index([date])
+  @@index([region])
+  @@index([product])
+}

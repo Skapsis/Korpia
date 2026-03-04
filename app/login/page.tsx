@@ -87,34 +87,34 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-4">
+        <div className="flex min-h-screen items-center justify-center bg-zinc-950 p-4">
             <div className="relative w-full max-w-md">
-                <div className="text-center mb-12">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 border border-indigo-600 mb-5">
+                <div className="mb-12 text-center">
+                    <div className="mb-5 inline-flex h-16 w-16 items-center justify-center rounded-2xl border border-blue-600 bg-blue-600">
                         <svg className="w-9 h-9 text-white" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm13 2a3 3 0 110 6 3 3 0 010-6z" />
                         </svg>
                     </div>
-                    <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Analytics Platform</h1>
-                    <p className="label-mini mt-2">Multi-empresa</p>
+                    <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">Analytics Platform</h1>
+                    <p className="label-mini mt-2 text-zinc-400">Multi-empresa</p>
                 </div>
 
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-10">
-                    <h2 className="section-title">Iniciar sesión</h2>
-                    <p className="label-mini mt-2 mb-8">Selecciona tu empresa y accede al panel</p>
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-10">
+                    <h2 className="section-title text-zinc-100">Iniciar sesión</h2>
+                    <p className="label-mini mt-2 mb-8 text-zinc-400">Selecciona tu empresa y accede al panel</p>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
-                            <label className="block label-mini mb-2">
+                            <label className="label-mini mb-2 block text-zinc-400">
                                 Empresa
                             </label>
                             <select
                                 value={empresa}
                                 onChange={(e) => setEmpresa(e.target.value as Empresa)}
-                                className="w-full bg-white border border-slate-200/80 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none cursor-pointer"
+                                className="w-full cursor-pointer appearance-none rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-zinc-100 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                             >
                                 {EMPRESAS.map((emp) => (
-                                    <option key={emp} value={emp} className="bg-white text-slate-900">
+                                    <option key={emp} value={emp} className="bg-zinc-800 text-zinc-100">
                                         {emp}
                                     </option>
                                 ))}
@@ -122,31 +122,31 @@ export default function LoginPage() {
                         </div>
 
                         <div>
-                            <label className="block label-mini mb-2">Usuario</label>
+                            <label className="label-mini mb-2 block text-zinc-400">Usuario</label>
                             <input
                                 type="text"
                                 value={usuario}
                                 onChange={(e) => setUsuario(e.target.value)}
-                                className="w-full bg-white border border-slate-200/80 rounded-xl px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                 placeholder="Ingresa tu usuario"
                                 required
                             />
                         </div>
 
                         <div>
-                            <label className="block label-mini mb-2">Contraseña</label>
+                            <label className="label-mini mb-2 block text-zinc-400">Contraseña</label>
                             <input
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-white border border-slate-200/80 rounded-xl px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                 placeholder="·····"
                                 required
                             />
                         </div>
 
                         {error && (
-                            <p className="text-red-700 text-sm bg-red-50 border border-red-200/80 rounded-xl px-4 py-3">
+                            <p className="rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm text-red-400">
                                 {error}
                             </p>
                         )}
@@ -154,7 +154,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl border border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 transition-all duration-200 flex items-center justify-center gap-2 mt-4"
+                            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-blue-600 bg-blue-600 py-4 font-semibold text-white transition-all duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-zinc-900 disabled:cursor-not-allowed disabled:bg-blue-800"
                         >
                             {loading ? (
                                 <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
@@ -167,7 +167,7 @@ export default function LoginPage() {
                     </form>
                 </div>
 
-                <p className="text-center label-mini mt-8">
+                <p className="label-mini mt-8 text-center text-zinc-500">
                     2026 Korpia Analytics · Multi-empresa
                 </p>
             </div>

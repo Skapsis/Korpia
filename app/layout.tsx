@@ -12,8 +12,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
-      <body className={`${inter.className} bg-[#FAFAFA] text-slate-900 antialiased`}>
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=block"
+        />
+      </head>
+      <body className={`${inter.className} bg-slate-50 text-slate-900 antialiased dark:bg-zinc-950 dark:text-zinc-100`}>
         <Providers>{children}</Providers>
       </body>
     </html>

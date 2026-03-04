@@ -1,8 +1,22 @@
 @import "tailwindcss";
 
+/* Material Symbols: iconos como glyphs, no texto. Fuente cargada en layout.tsx */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined', sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+}
+
 :root {
-  --background: #fafafa;
-  --foreground: #0f172a;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --color-primary: #2563eb;
 }
 
 @theme inline {
