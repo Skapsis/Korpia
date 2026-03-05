@@ -5,7 +5,7 @@ import { TopBar } from './TopBar';
 import { DashboardCanvas } from './DashboardCanvas';
 import { RightPropertiesPanel } from './RightPropertiesPanel';
 
-export type ChartType = 'bar' | 'line' | 'pie' | 'table' | 'kpi' | 'filter';
+export type ChartType = 'bar' | 'line' | 'pie' | 'table' | 'kpi' | 'filter' | 'area' | 'scatter';
 
 export type AggregationType = 'sum' | 'avg' | 'count';
 

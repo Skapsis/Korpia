@@ -1,14 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ChartType, Widget, AggregationType } from './AnalyticsDashboard';
+import type { SemanticModel } from '@/components/dashboard/SemanticModelEditor';
 
 const VIS_OPTIONS: { type: ChartType; icon: string; label: string }[] = [
   { type: 'bar', icon: 'bar_chart', label: 'Bar Chart' },
   { type: 'line', icon: 'show_chart', label: 'Line Chart' },
+  { type: 'area', icon: 'area_chart', label: 'Área' },
+  { type: 'scatter', icon: 'scatter_plot', label: 'Puntos' },
   { type: 'pie', icon: 'pie_chart', label: 'Pie Chart' },
   { type: 'table', icon: 'table_chart', label: 'Table' },
-  { type: 'kpi', icon: '123', label: 'KPI' },
+  { type: 'kpi', icon: '123', label: 'KPI / Scorecard' },
   { type: 'filter', icon: 'filter_alt', label: 'Filtro' },
 ];
 
@@ -26,15 +29,42 @@ const FINANCIAL_RECORD_FIELDS = [
   { key: 'product', label: 'Product', type: 'category' as const, icon: 'inventory_2' },
 ];
 
+type DataField = { key: string; label: string; type: 'category' | 'numeric'; icon: string };
+
+function semanticModelToDataFields(model: SemanticModel | null | undefined): DataField[] {
+  if (!model?.tables?.length) return [];
+  const iconByType = (t: string) =>
+    t === 'number' ? 'tag' : t === 'date' ? 'calendar_month' : t === 'boolean' ? 'toggle_on' : 'text_fields';
+  const allColumnNames = model.tables.flatMap((t) => t.columns.map((c) => c.name));
+  const hasClash = (name: string) => allColumnNames.filter((n) => n === name).length > 1;
+  const fields: DataField[] = [];
+  for (const table of model.tables) {
+    for (const col of table.columns) {
+      const key = hasClash(col.name)
+        ? `${table.name}_${col.name}`.replace(/\s+/g, '_')
+        : col.name;
+      const label = hasClash(col.name) ? `${table.name}.${col.name}` : col.name;
+      const type: 'category' | 'numeric' = col.type === 'number' ? 'numeric' : 'category';
+      fields.push({ key, label, type, icon: iconByType(col.type) });
+    }
+  }
+  return fields;
+}
+
 type Props = {
   widgets: Widget[];
   selectedWidgetId: string;
   updateWidget: (id: string, updates: Partial<Widget>) => void;
   onCollapse?: () => void;
+  semanticModel?: SemanticModel | null;
 };
 
-/** Panel derecho: Visualizations + Build Visual (drop zones) + Data (píldoras arrastrables). Sin checkboxes. */
-export function RightPropertiesPanel({ widgets, selectedWidgetId, updateWidget, onCollapse }: Props) {
+/** Panel derecho: Visualizations + Build Visual (drop zones) + Campos del Modelo Semántico. */
+export function RightPropertiesPanel({ widgets, selectedWidgetId, updateWidget, onCollapse, semanticModel }: Props) {
+  const dataFields = useMemo(() => {
+    const fromModel = semanticModelToDataFields(semanticModel);
+    return fromModel.length > 0 ? fromModel : FINANCIAL_RECORD_FIELDS;
+  }, [semanticModel]);
   const [panelWidth, setPanelWidth] = useState<number>(320);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -97,7 +127,7 @@ export function RightPropertiesPanel({ widgets, selectedWidgetId, updateWidget, 
   const removeFromX = () => updateWidget(selectedWidgetId, { xAxis: null });
   const removeFromY = (key: string) => updateWidget(selectedWidgetId, { yAxis: activeWidget.yAxis.filter((k) => k !== key) });
 
-  const xLabel = FINANCIAL_RECORD_FIELDS.find((f) => f.key === selectedXAxis)?.label ?? selectedXAxis;
+  const xLabel = dataFields.find((f) => f.key === selectedXAxis)?.label ?? selectedXAxis;
 
   const handleDropX = (e: React.DragEvent) => {
     e.preventDefault();
@@ -171,11 +201,31 @@ export function RightPropertiesPanel({ widgets, selectedWidgetId, updateWidget, 
             )}
           </div>
           <div className="mb-3">
-            <label className="text-xs font-semibold text-slate-500 mb-1 block">Y-Axis</label>
+            <label className="text-xs font-semibold text-slate-500 mb-1 block">
+              {chartType === 'kpi' ? 'Campo a medir (KPI)' : 'Y-Axis'}
+            </label>
+            {chartType === 'kpi' && selectedYAxis.length === 0 && (
+              <>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mb-1.5">Arrastra un campo numérico aquí para sumar/promediar, o deja vacío y usa Count para el número de registros.</p>
+                <div className="mb-2">
+                  <label className="text-[11px] text-slate-500 mb-0.5 block">Agregación</label>
+                  <select
+                    value={aggregation}
+                    onChange={(e) => updateWidget(selectedWidgetId, { aggregation: e.target.value as AggregationType })}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full text-xs rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 py-1.5 px-2 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {AGGREGATION_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
             {selectedYAxis.length > 0 ? (
               <div className="space-y-1">
                 {selectedYAxis.map((key) => {
-                  const field = FINANCIAL_RECORD_FIELDS.find((f) => f.key === key);
+                  const field = dataFields.find((f) => f.key === key);
                   const isNumeric = field?.type === 'numeric';
                   return (
                     <div key={key} className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-2 flex items-center justify-between gap-2 group flex-wrap">
@@ -215,16 +265,22 @@ export function RightPropertiesPanel({ widgets, selectedWidgetId, updateWidget, 
       </div>
       <div className="flex flex-col h-1/2 min-h-0 bg-white dark:bg-slate-900">
         <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
-          <span className="font-bold text-xs uppercase tracking-wider text-slate-500">Data Fields</span>
+          <span className="font-bold text-xs uppercase tracking-wider text-slate-500">
+            {semanticModel?.tables?.length ? 'Campos del Modelo Semántico' : 'Data Fields'}
+          </span>
         </div>
         <div className="flex-1 overflow-y-auto p-2 min-h-0">
           <div className="mb-2">
             <div className="flex items-center gap-2 px-2 py-1 rounded mb-2">
-              <span className="material-symbols-outlined text-slate-400 text-sm">table_view</span>
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">FinancialRecord</span>
+              <span className="material-symbols-outlined text-slate-400 text-sm">
+                {semanticModel?.tables?.length ? 'account_tree' : 'table_view'}
+              </span>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                {semanticModel?.tables?.length ? 'Modelo actual' : 'FinancialRecord'}
+              </span>
             </div>
             <div className="pl-2 flex flex-wrap gap-2">
-              {FINANCIAL_RECORD_FIELDS.map(({ key, label, icon }) => (
+              {dataFields.map(({ key, label, icon }) => (
                 <div
                   key={key}
                   draggable

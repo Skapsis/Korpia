@@ -2,6 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AreaChart,
+  Area,
   BarChart,
   Bar,
   LineChart,
@@ -9,6 +11,8 @@ import {
   PieChart,
   Pie,
   Cell,
+  ScatterChart,
+  Scatter,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -42,10 +46,22 @@ function computeKpiValue(
   field: string,
   aggregation: 'sum' | 'avg' | 'count'
 ): number {
+  if (!data?.length) return 0;
   if (aggregation === 'count') return data.length;
-  const sum = data.reduce((acc, row) => acc + (Number((row as Record<string, unknown>)[field]) || 0), 0);
-  if (aggregation === 'avg') return data.length > 0 ? sum / data.length : 0;
-  return sum;
+  const total = data.reduce((acc, row) => {
+    const val = Number((row as Record<string, unknown>)[field]);
+    return acc + (Number.isNaN(val) ? 0 : val);
+  }, 0);
+  if (aggregation === 'avg') return total / data.length;
+  return total;
+}
+
+function formatKpiValue(value: number): string {
+  return new Intl.NumberFormat('es-ES', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    notation: Math.abs(value) >= 1_000_000 ? 'compact' : 'standard',
+  }).format(value);
 }
 
 const FILTER_FIELD_LABELS: Record<string, string> = {
@@ -84,6 +100,26 @@ const FilterWidget = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isDropdownOpen]);
 
+  // Hack para vencer el Stacking Context del Grid
+  useEffect(() => {
+    if (!dropdownRef.current) return;
+    const gridElement =
+      dropdownRef.current.closest('.react-grid-item') ||
+      dropdownRef.current.closest('[data-grid]') ||
+      dropdownRef.current.parentElement?.parentElement?.parentElement;
+    const el = gridElement as HTMLElement | null;
+    if (el) {
+      if (isDropdownOpen) {
+        el.style.setProperty('z-index', '99999', 'important');
+      } else {
+        el.style.removeProperty('z-index');
+      }
+    }
+    return () => {
+      if (el) el.style.removeProperty('z-index');
+    };
+  }, [isDropdownOpen]);
+
   const currentArray: string[] = Array.isArray(currentFilterValue)
     ? currentFilterValue
     : currentFilterValue
@@ -93,7 +129,7 @@ const FilterWidget = ({
   return (
     <div
       ref={dropdownRef}
-      className="relative w-full h-full flex flex-col justify-center no-drag cancel-drag overflow-visible"
+      className={`relative w-full h-full flex flex-col justify-center no-drag cancel-drag overflow-visible ${isDropdownOpen ? 'z-[99999]' : 'z-10'}`}
       onMouseDown={(e) => e.stopPropagation()}
     >
       <span className="text-[10px] font-bold text-slate-500 uppercase mb-0.5 truncate cursor-default">
@@ -121,7 +157,7 @@ const FilterWidget = ({
       </button>
       {isDropdownOpen && (
         <div
-          className="absolute top-full left-0 mt-1 w-full min-w-[160px] bg-white border border-slate-200 shadow-xl rounded-md max-h-56 overflow-y-auto z-[99999] p-1.5 custom-scrollbar no-drag cancel-drag"
+          className="absolute top-full left-0 mt-1 w-full min-w-[160px] bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-600 shadow-2xl ring-1 ring-black/5 rounded-md max-h-56 overflow-y-auto z-[99999] p-1.5 custom-scrollbar no-drag cancel-drag"
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
         >
@@ -218,31 +254,71 @@ function WidgetChart({
   }
 
   if (chartType === 'kpi') {
-    const field = selectedYAxis[0];
-    const value = field ? computeKpiValue(data, field, aggregation) : 0;
-    const label =
-      aggregation === 'sum'
-        ? `Total ${field ? field.charAt(0).toUpperCase() + field.slice(1) : 'Value'}`
-        : aggregation === 'avg'
-          ? `Avg ${field ? field.charAt(0).toUpperCase() + field.slice(1) : 'Value'}`
-          : 'Count';
+    const fieldToAggregate = selectedYAxis[0] || selectedXAxis;
+    const aggregationType = aggregation || 'sum';
+    const kpiValue = computeKpiValue(data, fieldToAggregate || 'revenue', aggregationType);
+    const kpiWidget = widget as Widget & { title?: string; format?: string; subtitle?: string };
+    const kpiTitle = kpiWidget.title || (fieldToAggregate ? `Total ${fieldToAggregate.charAt(0).toUpperCase() + fieldToAggregate.slice(1)}` : 'Registros');
     return (
-      <div className="flex flex-col items-center justify-center h-[280px] p-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
-          {label}
-        </p>
-        <p className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white tabular-nums">
-          {typeof value === 'number' && (value > 999 || value < -999)
-            ? value.toLocaleString(undefined, { maximumFractionDigits: 0 })
-            : value.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-        </p>
+      <div className="flex flex-col items-center justify-center w-full h-full p-4 bg-[#111827] rounded-md shadow-sm border border-slate-700/50 no-drag cancel-drag">
+        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider text-center mb-2">
+          {kpiTitle}
+        </h3>
+        <div className="flex items-baseline justify-center gap-1">
+          {kpiWidget.format === 'currency' && (
+            <span className="text-2xl font-bold text-slate-500">$</span>
+          )}
+          <span className="text-4xl md:text-5xl font-extrabold text-white tracking-tight drop-shadow-sm tabular-nums">
+            {formatKpiValue(kpiValue)}
+          </span>
+        </div>
+        {kpiWidget.subtitle && (
+          <p className="text-[10px] text-slate-500 mt-2 text-center uppercase tracking-wide">{kpiWidget.subtitle}</p>
+        )}
       </div>
     );
   }
 
   if (chartType === 'table') {
+    const getTableData = (): Record<string, unknown>[] => {
+      if (!data?.length) return [];
+      const agg = aggregation || 'sum';
+      if (!selectedXAxis || !selectedYAxis?.length || agg === 'none') {
+        return data.slice(0, 100).map((row) => ({ ...row })) as Record<string, unknown>[];
+      }
+      type Group = { count: number; sums: Record<string, number>; category: string };
+      const grouped: Record<string, Group> = {};
+      data.forEach((row) => {
+        const raw = row as Record<string, unknown>;
+        const categoryValue = raw[selectedXAxis];
+        const category =
+          categoryValue !== undefined && categoryValue !== null ? String(categoryValue) : 'N/A';
+        if (!grouped[category]) {
+          grouped[category] = { count: 0, sums: {} as Record<string, number>, category };
+          selectedYAxis.forEach((k) => { grouped[category].sums[k] = 0; });
+        }
+        const g = grouped[category];
+        g.count += 1;
+        selectedYAxis.forEach((key) => {
+          const numValue = Number(raw[key]);
+          g.sums[key] = (g.sums[key] ?? 0) + (Number.isNaN(numValue) ? 0 : numValue);
+        });
+      });
+      return Object.values(grouped).map((group) => {
+        const row: Record<string, unknown> = { [selectedXAxis]: group.category };
+        selectedYAxis.forEach((key) => {
+          const s = group.sums[key] ?? 0;
+          if (agg === 'sum') row[key] = s;
+          else if (agg === 'avg') row[key] = group.count ? s / group.count : 0;
+          else row[key] = group.count;
+        });
+        return row;
+      });
+    };
+    const aggregatedTableData = getTableData();
+
     return (
-      <div className="overflow-x-auto max-h-[320px] overflow-y-auto">
+      <div className="overflow-x-auto max-h-[320px] overflow-y-auto custom-scrollbar">
         <table className="w-full text-sm text-left">
           <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0">
             <tr>
@@ -253,18 +329,18 @@ function WidgetChart({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {data.map((row, i) => (
-              <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+            {aggregatedTableData.map((row, index) => (
+              <tr key={index} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                 {selectedXAxis && (
-                  <td className="px-3 py-1.5 font-medium text-slate-900 dark:text-slate-100">
-                    {String((row as Record<string, unknown>)[selectedXAxis])}
+                  <td className="py-2 px-3 text-sm font-medium text-slate-900 dark:text-slate-100">
+                    {String(row[selectedXAxis] ?? '')}
                   </td>
                 )}
                 {selectedYAxis.map((key) => (
-                  <td key={key} className="px-3 py-1.5 text-right text-slate-700 dark:text-slate-300 font-mono text-xs">
-                    {typeof (row as Record<string, unknown>)[key] === 'number'
-                      ? Number((row as Record<string, unknown>)[key]).toLocaleString()
-                      : String((row as Record<string, unknown>)[key])}
+                  <td key={key} className="py-2 px-3 text-sm text-slate-700 dark:text-slate-300 text-right font-mono">
+                    {typeof row[key] === 'number'
+                      ? new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2 }).format(row[key] as number)
+                      : String(row[key] ?? '')}
                   </td>
                 ))}
               </tr>
@@ -326,6 +402,49 @@ function WidgetChart({
           </PieChart>
         </ResponsiveContainer>
       )}
+      {chartType === 'area' && (
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+            <XAxis dataKey={selectedXAxis ?? undefined} stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : String(v))} />
+            <Tooltip
+              contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc', borderRadius: '6px' }}
+              itemStyle={{ color: '#60a5fa' }}
+              formatter={(value: number | undefined) => [value != null ? value.toLocaleString() : '', selectedYAxis[0] ?? '']}
+            />
+            {selectedYAxis.map((key, i) => (
+              <Area
+                key={key}
+                type="monotone"
+                dataKey={key}
+                stroke={COLORS[i % COLORS.length]}
+                fill={COLORS[i % COLORS.length]}
+                fillOpacity={0.3}
+                name={key.charAt(0).toUpperCase() + key.slice(1)}
+              />
+            ))}
+          </AreaChart>
+        </ResponsiveContainer>
+      )}
+      {chartType === 'scatter' && (
+        <ResponsiveContainer width="100%" height="100%">
+          <ScatterChart margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+            <XAxis dataKey={selectedXAxis ?? undefined} stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis dataKey={selectedYAxis[0] ?? 'revenue'} stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+            <Tooltip
+              cursor={{ strokeDasharray: '3 3', stroke: '#475569' }}
+              contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc', borderRadius: '6px' }}
+            />
+            <Scatter
+              name={(widget as Widget & { title?: string }).title || 'Datos'}
+              data={data}
+              fill="#60a5fa"
+            />
+          </ScatterChart>
+        </ResponsiveContainer>
+      )}
     </div>
   );
 }
@@ -349,7 +468,7 @@ function WidgetCard({
       tabIndex={isEditing ? 0 : undefined}
       onClick={isEditing ? () => onSelect() : undefined}
       onKeyDown={isEditing ? (e) => e.key === 'Enter' && onSelect() : undefined}
-      className={`w-full h-full absolute inset-0 flex flex-col rounded-lg transition-colors ${isFilter ? 'overflow-visible z-50' : 'overflow-hidden z-10'} ${
+      className={`w-full h-full absolute inset-0 flex flex-col rounded-lg transition-colors ${isFilter ? 'overflow-visible z-50 hover:z-[60]' : 'overflow-hidden z-10'} ${
         isEditing
           ? `border-2 cursor-pointer bg-white dark:bg-slate-900 ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'}`
           : 'border border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 cursor-default'
@@ -379,8 +498,8 @@ function WidgetCard({
           </button>
         </div>
       )}
-      <div className={`flex-1 min-h-0 flex flex-col ${isFilter ? 'p-0' : 'p-3 overflow-y-auto custom-scrollbar'}`}>
-        <div className="relative flex-1 min-h-0">
+      <div className={`flex-1 min-h-0 flex flex-col ${isFilter ? 'p-0 overflow-visible' : 'p-3 overflow-y-auto custom-scrollbar'}`}>
+        <div className={`relative flex-1 min-h-0 ${isFilter ? 'overflow-visible' : ''}`}>
           <WidgetChart
             widget={widget}
             data={data}

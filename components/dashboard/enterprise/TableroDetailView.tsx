@@ -6,8 +6,33 @@ import toast from 'react-hot-toast';
 import { TopBar } from '@/components/dashboard/studio/TopBar';
 import { DashboardCanvas } from '@/components/dashboard/studio/DashboardCanvas';
 import { RightPropertiesPanel } from '@/components/dashboard/studio/RightPropertiesPanel';
+import { DataSourcePanel } from '@/components/dashboard/DataSourcePanel';
+import {
+  SemanticModelEditor,
+  type SemanticModel,
+} from '@/components/dashboard/SemanticModelEditor';
 import type { Widget, FinancialRecordSerialized, ChartDataRow } from '@/components/dashboard/studio/AnalyticsDashboard';
 import type { LayoutItem } from '@/components/dashboard/studio/DashboardCanvas';
+
+/** Convierte filas genéricas del API de DB en formato esperado por el dashboard. */
+function normalizeQueryRows(rows: Record<string, unknown>[]): FinancialRecordSerialized[] {
+  const get = (row: Record<string, unknown>, ...keys: string[]) => {
+    for (const k of keys) {
+      if (Object.prototype.hasOwnProperty.call(row, k)) return row[k];
+    }
+    return undefined;
+  };
+  return rows.map((row, i) => {
+    const id = String(get(row, 'id', 'Id') ?? `${i + 1}`);
+    const dateRaw = get(row, 'date', 'Date', 'fecha');
+    const date = dateRaw != null ? String(dateRaw) : '2024-01-01';
+    const revenue = Number(get(row, 'revenue', 'Revenue', 'revenue')) || 0;
+    const target = Number(get(row, 'target', 'Target', 'target')) || 0;
+    const region = String(get(row, 'region', 'Region', 'region') ?? '');
+    const product = String(get(row, 'product', 'Product') ?? '');
+    return { id, date, revenue, target, region, product };
+  });
+}
 
 const MONTH_SHORT: Record<number, string> = {
   0: 'Ene', 1: 'Feb', 2: 'Mar', 3: 'Abr', 4: 'May', 5: 'Jun',
@@ -37,6 +62,25 @@ const MOCK_INITIAL_DATA: FinancialRecordSerialized[] = [
 ];
 
 const STORAGE_KEY_PREFIX = 'dashboard_data_';
+const SEMANTIC_MODEL_KEY_PREFIX = 'semantic_model_';
+
+function loadSemanticModelFromStorage(tableroId: string): SemanticModel | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(`${SEMANTIC_MODEL_KEY_PREFIX}${tableroId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SemanticModel;
+    if (!parsed?.tables) return null;
+    return { tables: parsed.tables, relationships: parsed.relationships ?? [] };
+  } catch {
+    return null;
+  }
+}
+
+function saveSemanticModelToStorage(tableroId: string, model: SemanticModel) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(`${SEMANTIC_MODEL_KEY_PREFIX}${tableroId}`, JSON.stringify(model));
+}
 
 function loadPagesFromStorage(tableroId: string): Page[] | null {
   if (typeof window === 'undefined') return null;
@@ -72,6 +116,10 @@ export function TableroDetailView({ tableroId, tableroNombre = 'Ventas Totales',
   const [editingPageId, setEditingPageId] = useState<string | null>(null);
   const [editingPageName, setEditingPageName] = useState('');
   const [activeFilters, setActiveFilters] = useState<Record<string, string | string[]>>({});
+  const [dataSourceData, setDataSourceData] = useState<FinancialRecordSerialized[] | null>(null);
+  const [isDataSourcePanelOpen, setIsDataSourcePanelOpen] = useState(false);
+  const [semanticModel, setSemanticModel] = useState<SemanticModel>(() => ({ tables: [], relationships: [] }));
+  const [isSemanticModelOpen, setIsSemanticModelOpen] = useState(false);
 
   const currentPage = useMemo(() => pages.find((p) => p.id === currentPageId), [pages, currentPageId]);
   const currentWidgets = useMemo(() => currentPage?.widgets ?? [], [currentPage]);
@@ -86,8 +134,14 @@ export function TableroDetailView({ tableroId, tableroNombre = 'Ventas Totales',
     }
   }, [tableroId]);
 
+  useEffect(() => {
+    const stored = loadSemanticModelFromStorage(tableroId);
+    if (stored) setSemanticModel(stored);
+  }, [tableroId]);
+
+  const rawDataForCharts = dataSourceData ?? initialData;
   const chartData: ChartDataRow[] = useMemo(() => {
-    return initialData.map((r) => {
+    return rawDataForCharts.map((r) => {
       const d = new Date(r.date);
       const monthLabel = MONTH_SHORT[d.getMonth()] ?? r.date.slice(0, 7);
       return {
@@ -98,7 +152,7 @@ export function TableroDetailView({ tableroId, tableroNombre = 'Ventas Totales',
         product: r.product,
       };
     });
-  }, [initialData]);
+  }, [rawDataForCharts]);
 
   const regions = useMemo(() => {
     const set = new Set(chartData.map((r) => r.region).filter(Boolean));
@@ -241,14 +295,34 @@ export function TableroDetailView({ tableroId, tableroNombre = 'Ventas Totales',
               Editar Tablero
             </button>
           ) : (
-            <button
-              type="button"
-              onClick={handleSave}
-              className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
-            >
-              <span className="material-symbols-outlined text-[18px]">check</span>
-              Guardar Cambios
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleSave}
+                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
+              >
+                <span className="material-symbols-outlined text-[18px]">check</span>
+                Guardar Cambios
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsDataSourcePanelOpen(true)}
+                className="flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                title="Conectar fuente de datos"
+              >
+                <span className="material-symbols-outlined text-[18px]">database</span>
+                Fuente de datos
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSemanticModelOpen(true)}
+                className="flex items-center gap-2 rounded-lg bg-slate-800 dark:bg-slate-700 border border-slate-600 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors"
+                title="Editar modelo semántico"
+              >
+                <span className="material-symbols-outlined text-[18px]">account_tree</span>
+                Modelo Semántico
+              </button>
+            </>
           )}
           <button type="button" className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800" title="Share">
             <span className="material-symbols-outlined text-[20px]">share</span>
@@ -267,6 +341,37 @@ export function TableroDetailView({ tableroId, tableroNombre = 'Ventas Totales',
           regions={regions}
           onGlobalFilterChange={setGlobalFilter}
         />
+      )}
+
+      {/* Modal full-screen Modelo Semántico */}
+      {isSemanticModelOpen && (
+        <SemanticModelEditor
+          model={semanticModel}
+          onSave={(model) => {
+            setSemanticModel(model);
+            saveSemanticModelToStorage(tableroId, model);
+            toast.success('Modelo semántico guardado');
+          }}
+          onClose={() => setIsSemanticModelOpen(false)}
+        />
+      )}
+
+      {/* Panel deslizante Fuente de datos */}
+      {isDataSourcePanelOpen && (
+        <div className="fixed inset-0 z-[100] flex justify-end">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setIsDataSourcePanelOpen(false)} aria-hidden />
+          <aside className="relative w-full max-w-md bg-slate-900 shadow-2xl flex flex-col">
+            <DataSourcePanel
+              isOpen
+              onClose={() => setIsDataSourcePanelOpen(false)}
+              onDataLoaded={(data) => {
+                const normalized = normalizeQueryRows(data as Record<string, unknown>[]);
+                setDataSourceData(normalized);
+                setIsDataSourcePanelOpen(false);
+              }}
+            />
+          </aside>
+        </div>
       )}
 
       <div className="flex flex-1 overflow-hidden relative min-h-0">
@@ -290,6 +395,7 @@ export function TableroDetailView({ tableroId, tableroNombre = 'Ventas Totales',
             selectedWidgetId={selectedWidgetId}
             updateWidget={updateWidget}
             onCollapse={() => setIsRightPanelOpen(false)}
+            semanticModel={semanticModel}
           />
         )}
         {isEditing && !isRightPanelOpen && (
