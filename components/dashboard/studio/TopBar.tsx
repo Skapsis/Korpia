@@ -81,44 +81,12 @@ export function TopBar({
           </h2>
         </div>
         <div className="h-6 w-px bg-slate-300 dark:bg-slate-700 mx-2" />
-        <div className="flex items-center gap-6">
-          <a
-            className="text-slate-600 dark:text-slate-400 hover:text-[#135bec] dark:hover:text-[#135bec] text-sm font-medium transition-colors"
-            href="#"
-          >
-            File
-          </a>
-          <Link
-            className="text-slate-900 dark:text-white text-sm font-medium border-b-2 border-[#135bec] pb-[18px] -mb-[18px]"
-            href="/dashboard"
-          >
-            Home
-          </Link>
-          <Link
-            className="text-slate-600 dark:text-slate-400 hover:text-[#135bec] dark:hover:text-[#135bec] text-sm font-medium transition-colors"
-            href="/dashboard/config"
-          >
-            Administración
-          </Link>
-          <a
-            className="text-slate-600 dark:text-slate-400 hover:text-[#135bec] dark:hover:text-[#135bec] text-sm font-medium transition-colors"
-            href="#"
-          >
-            Insert
-          </a>
-          <a
-            className="text-slate-600 dark:text-slate-400 hover:text-[#135bec] dark:hover:text-[#135bec] text-sm font-medium transition-colors"
-            href="#"
-          >
-            Modeling
-          </a>
-          <a
-            className="text-slate-600 dark:text-slate-400 hover:text-[#135bec] dark:hover:text-[#135bec] text-sm font-medium transition-colors"
-            href="#"
-          >
-            View
-          </a>
-        </div>
+        <Link
+          className="text-slate-900 dark:text-white text-sm font-medium border-b-2 border-[#135bec] pb-[18px] -mb-[18px] hover:text-[#135bec] transition-colors"
+          href="/dashboard"
+        >
+          Home
+        </Link>
       </div>
       <div className="flex items-center gap-3">
         {onClearCanvas && (
@@ -185,15 +153,6 @@ export function TopBar({
             </>
           )}
         </div>
-        <span className="text-xs text-slate-500 dark:text-slate-400">
-          Last saved: Just now
-        </span>
-        <button
-          type="button"
-          className="flex items-center justify-center rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 h-8 px-3 text-sm font-semibold transition-colors"
-        >
-          Publish
-        </button>
         <div className="flex items-center gap-1 border-l border-slate-300 dark:border-slate-700 pl-3">
           <button
             type="button"

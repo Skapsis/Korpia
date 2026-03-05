@@ -1,12 +1,21 @@
 'use client';
 
-import type { ChartType, Widget } from './AnalyticsDashboard';
+import { useCallback, useEffect, useState } from 'react';
+import type { ChartType, Widget, AggregationType } from './AnalyticsDashboard';
 
 const VIS_OPTIONS: { type: ChartType; icon: string; label: string }[] = [
   { type: 'bar', icon: 'bar_chart', label: 'Bar Chart' },
   { type: 'line', icon: 'show_chart', label: 'Line Chart' },
   { type: 'pie', icon: 'pie_chart', label: 'Pie Chart' },
   { type: 'table', icon: 'table_chart', label: 'Table' },
+  { type: 'kpi', icon: '123', label: 'KPI' },
+  { type: 'filter', icon: 'filter_alt', label: 'Filtro' },
+];
+
+const AGGREGATION_OPTIONS: { value: AggregationType; label: string }[] = [
+  { value: 'sum', label: 'Sum' },
+  { value: 'avg', label: 'Average' },
+  { value: 'count', label: 'Count' },
 ];
 
 const FINANCIAL_RECORD_FIELDS = [
@@ -26,11 +35,41 @@ type Props = {
 
 /** Panel derecho: Visualizations + Build Visual (drop zones) + Data (píldoras arrastrables). Sin checkboxes. */
 export function RightPropertiesPanel({ widgets, selectedWidgetId, updateWidget, onCollapse }: Props) {
+  const [panelWidth, setPanelWidth] = useState<number>(320);
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = Math.min(600, Math.max(250, window.innerWidth - e.clientX));
+      setPanelWidth(newWidth);
+      document.body.style.cursor = 'col-resize';
+    };
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      document.body.style.cursor = '';
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
   const activeWidget = widgets.find((w) => w.id === selectedWidgetId);
 
   if (!activeWidget) {
     return (
-      <aside className="w-80 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col shrink-0 z-10">
+      <aside
+        className="relative bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col shrink-0 z-10"
+        style={{ width: `${panelWidth}px` }}
+      >
+        <div
+          onMouseDown={() => setIsDragging(true)}
+          className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-500 z-50 transition-colors"
+        >
+        </div>
         <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
           <span className="font-bold text-xs uppercase tracking-wider text-slate-500">Visualizations</span>
           {onCollapse && (
@@ -46,10 +85,13 @@ export function RightPropertiesPanel({ widgets, selectedWidgetId, updateWidget, 
     );
   }
 
-  const { type: chartType, xAxis: selectedXAxis, yAxis: selectedYAxis } = activeWidget;
+  const { type: chartType, xAxis: selectedXAxis, yAxis: selectedYAxis, aggregation = 'sum' } = activeWidget;
 
   const handleVisualizationClick = (type: ChartType) => {
-    updateWidget(selectedWidgetId, { type });
+    const updates: Partial<Widget> = { type };
+    if (type === 'kpi' || type === 'filter') updates.colSpan = 1;
+    if (type === 'line') updates.colSpan = 2;
+    updateWidget(selectedWidgetId, updates);
   };
 
   const removeFromX = () => updateWidget(selectedWidgetId, { xAxis: null });
@@ -72,7 +114,15 @@ export function RightPropertiesPanel({ widgets, selectedWidgetId, updateWidget, 
   };
 
   return (
-    <aside className="w-80 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col shrink-0 z-10">
+    <aside
+      className="relative bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col shrink-0 z-10"
+      style={{ width: `${panelWidth}px` }}
+    >
+      <div
+        onMouseDown={() => setIsDragging(true)}
+        className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-500 z-50 transition-colors"
+      >
+      </div>
       <div className="flex flex-col border-b border-slate-200 dark:border-slate-700 h-1/2 min-h-0">
         <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
           <span className="font-bold text-xs uppercase tracking-wider text-slate-500">Visualizations</span>
@@ -126,13 +176,26 @@ export function RightPropertiesPanel({ widgets, selectedWidgetId, updateWidget, 
               <div className="space-y-1">
                 {selectedYAxis.map((key) => {
                   const field = FINANCIAL_RECORD_FIELDS.find((f) => f.key === key);
+                  const isNumeric = field?.type === 'numeric';
                   return (
-                    <div key={key} className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-2 flex items-center justify-between group">
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-sm text-slate-400">{field?.icon ?? 'tag'}</span>
-                        <span className="text-sm text-slate-700 dark:text-slate-200">{field?.label ?? key}</span>
+                    <div key={key} className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-2 flex items-center justify-between gap-2 group flex-wrap">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="material-symbols-outlined text-sm text-slate-400 shrink-0">{field?.icon ?? 'tag'}</span>
+                        <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{field?.label ?? key}</span>
+                        {isNumeric && (
+                          <select
+                            value={aggregation}
+                            onChange={(e) => updateWidget(selectedWidgetId, { aggregation: e.target.value as AggregationType })}
+                            onClick={(e) => e.stopPropagation()}
+                            className="ml-1 text-xs rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 py-0.5 px-1.5 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            {AGGREGATION_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        )}
                       </div>
-                      <button type="button" onClick={() => removeFromY(key)} className="text-slate-400 hover:text-red-500 cursor-pointer p-0.5 rounded" aria-label={`Remove ${field?.label ?? key}`}>
+                      <button type="button" onClick={() => removeFromY(key)} className="text-slate-400 hover:text-red-500 cursor-pointer p-0.5 rounded shrink-0" aria-label={`Remove ${field?.label ?? key}`}>
                         <span className="material-symbols-outlined text-sm">close</span>
                       </button>
                     </div>

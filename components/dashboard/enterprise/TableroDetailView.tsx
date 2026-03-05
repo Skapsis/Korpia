@@ -2,14 +2,22 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import { TopBar } from '@/components/dashboard/studio/TopBar';
 import { DashboardCanvas } from '@/components/dashboard/studio/DashboardCanvas';
 import { RightPropertiesPanel } from '@/components/dashboard/studio/RightPropertiesPanel';
 import type { Widget, FinancialRecordSerialized, ChartDataRow } from '@/components/dashboard/studio/AnalyticsDashboard';
+import type { LayoutItem } from '@/components/dashboard/studio/DashboardCanvas';
 
 const MONTH_SHORT: Record<number, string> = {
   0: 'Ene', 1: 'Feb', 2: 'Mar', 3: 'Abr', 4: 'May', 5: 'Jun',
   6: 'Jul', 7: 'Ago', 8: 'Sep', 9: 'Oct', 10: 'Nov', 11: 'Dic',
+};
+
+export type Page = {
+  id: string;
+  name: string;
+  widgets: Widget[];
 };
 
 /** Mock para tablero: mismo formato que FinancialRecord para que el lienzo funcione. */
@@ -28,13 +36,27 @@ const MOCK_INITIAL_DATA: FinancialRecordSerialized[] = [
   { id: '12', date: '2024-12-01', revenue: 71400, target: 65000, region: 'Sur', product: 'A' },
 ];
 
-const INITIAL_WIDGET: Widget = {
-  id: '1',
-  type: 'bar',
-  xAxis: 'date',
-  yAxis: ['revenue'],
-  colSpan: 1,
-};
+const STORAGE_KEY_PREFIX = 'dashboard_data_';
+
+function loadPagesFromStorage(tableroId: string): Page[] | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${tableroId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Page[];
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function savePagesToStorage(tableroId: string, pages: Page[]) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(`${STORAGE_KEY_PREFIX}${tableroId}`, JSON.stringify(pages));
+}
+
+const INITIAL_PAGES: Page[] = [{ id: 'page-1', name: 'Página 1', widgets: [] }];
 
 export function TableroDetailView({ tableroId, tableroNombre = 'Ventas Totales', initialData = MOCK_INITIAL_DATA }: {
   tableroId: string;
@@ -42,10 +64,27 @@ export function TableroDetailView({ tableroId, tableroNombre = 'Ventas Totales',
   initialData?: FinancialRecordSerialized[];
 }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [widgets, setWidgets] = useState<Widget[]>([INITIAL_WIDGET]);
-  const [selectedWidgetId, setSelectedWidgetId] = useState<string>('1');
+  const [pages, setPages] = useState<Page[]>(INITIAL_PAGES);
+  const [currentPageId, setCurrentPageId] = useState<string>('page-1');
+  const [selectedWidgetId, setSelectedWidgetId] = useState<string>('');
   const [globalFilter, setGlobalFilter] = useState<{ region: string }>({ region: 'All' });
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [editingPageId, setEditingPageId] = useState<string | null>(null);
+  const [editingPageName, setEditingPageName] = useState('');
+  const [activeFilters, setActiveFilters] = useState<Record<string, string | string[]>>({});
+
+  const currentPage = useMemo(() => pages.find((p) => p.id === currentPageId), [pages, currentPageId]);
+  const currentWidgets = useMemo(() => currentPage?.widgets ?? [], [currentPage]);
+
+  useEffect(() => {
+    const stored = loadPagesFromStorage(tableroId);
+    if (stored) {
+      setPages(stored);
+      setCurrentPageId(stored[0].id);
+      const firstWidget = stored[0].widgets[0];
+      setSelectedWidgetId(firstWidget?.id ?? '');
+    }
+  }, [tableroId]);
 
   const chartData: ChartDataRow[] = useMemo(() => {
     return initialData.map((r) => {
@@ -67,42 +106,118 @@ export function TableroDetailView({ tableroId, tableroNombre = 'Ventas Totales',
   }, [chartData]);
 
   const filteredData = useMemo(() => {
-    if (globalFilter.region === 'All') return chartData;
-    return chartData.filter((d) => d.region === globalFilter.region);
-  }, [chartData, globalFilter.region]);
+    let result = chartData;
+    if (globalFilter.region !== 'All') result = result.filter((d) => d.region === globalFilter.region);
+    Object.entries(activeFilters).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        if (value.length > 0) {
+          const set = new Set(value);
+          result = result.filter((row) => set.has(String((row as Record<string, unknown>)[key])));
+        }
+      } else if (value && value !== 'Todos') {
+        result = result.filter((row) => String((row as Record<string, unknown>)[key]) === value);
+      }
+    });
+    return result;
+  }, [chartData, globalFilter.region, activeFilters]);
+
+  const handleFilterChange = useCallback((key: string, value: string | string[]) => {
+    setActiveFilters((prev) => {
+      const next = { ...prev };
+      const isEmpty = Array.isArray(value) ? value.length === 0 : !value || value === 'Todos';
+      if (isEmpty) delete next[key];
+      else next[key] = value;
+      return next;
+    });
+  }, []);
+
+  const updateCurrentPageWidgets = useCallback((updater: (widgets: Widget[]) => Widget[]) => {
+    setPages((prev) =>
+      prev.map((p) =>
+        p.id === currentPageId ? { ...p, widgets: updater(p.widgets) } : p
+      )
+    );
+  }, [currentPageId]);
 
   const updateWidget = useCallback((id: string, updates: Partial<Widget>) => {
-    setWidgets((prev) => prev.map((w) => (w.id === id ? { ...w, ...updates } : w)));
-  }, []);
+    updateCurrentPageWidgets((widgets) =>
+      widgets.map((w) => (w.id === id ? { ...w, ...updates } : w))
+    );
+  }, [updateCurrentPageWidgets]);
 
   const addWidget = useCallback(() => {
     const newId = Date.now().toString();
-    setWidgets((prev) => [...prev, { id: newId, type: 'bar', xAxis: null, yAxis: [], colSpan: 1 }]);
+    updateCurrentPageWidgets((widgets) => {
+      const nextY = widgets.length === 0 ? 0 : widgets.reduce((max, w) => Math.max(max, (w.layout?.y ?? 0) + (w.layout?.h ?? 3)), 0);
+      return [
+        ...widgets,
+        { id: newId, type: 'bar', xAxis: null, yAxis: [], colSpan: 1, layout: { x: 0, y: nextY, w: 6, h: 3 } },
+      ];
+    });
     setSelectedWidgetId(newId);
-  }, []);
+  }, [updateCurrentPageWidgets]);
 
   const deleteWidget = useCallback((id: string) => {
-    setWidgets((prev) => prev.filter((w) => w.id !== id));
-  }, []);
+    updateCurrentPageWidgets((widgets) => widgets.filter((w) => w.id !== id));
+  }, [updateCurrentPageWidgets]);
 
   useEffect(() => {
-    const exists = widgets.some((w) => w.id === selectedWidgetId);
-    if (widgets.length > 0 && !exists) setSelectedWidgetId(widgets[0].id);
-    if (widgets.length === 0) setSelectedWidgetId('');
-  }, [widgets, selectedWidgetId]);
+    const exists = currentWidgets.some((w) => w.id === selectedWidgetId);
+    if (currentWidgets.length > 0 && !exists) setSelectedWidgetId(currentWidgets[0].id);
+    if (currentWidgets.length === 0) setSelectedWidgetId('');
+  }, [currentWidgets, selectedWidgetId]);
 
   const toggleColSpan = useCallback((id: string) => {
-    setWidgets((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, colSpan: w.colSpan === 1 ? 2 : 1 } : w))
+    updateCurrentPageWidgets((widgets) =>
+      widgets.map((w) => (w.id === id ? { ...w, colSpan: w.colSpan === 1 ? 2 : 1 } : w))
     );
-  }, []);
+  }, [updateCurrentPageWidgets]);
+
+  const handleLayoutChange = useCallback(
+    (newLayout: LayoutItem[]) => {
+      updateCurrentPageWidgets((widgets) =>
+        widgets.map((w) => {
+          const item = newLayout.find((l) => l.i === w.id);
+          if (!item) return w;
+          return {
+            ...w,
+            layout: { x: item.x, y: item.y, w: item.w, h: item.h },
+            colSpan: item.w >= 12 ? 2 : 1,
+          };
+        })
+      );
+    },
+    [updateCurrentPageWidgets]
+  );
 
   const clearCanvas = useCallback(() => {
-    setWidgets([]);
+    updateCurrentPageWidgets(() => []);
     setSelectedWidgetId('');
+  }, [updateCurrentPageWidgets]);
+
+  const addPage = useCallback(() => {
+    const newId = Date.now().toString();
+    const newName = `Página ${pages.length + 1}`;
+    setPages((prev) => [...prev, { id: newId, name: newName, widgets: [] }]);
+    setCurrentPageId(newId);
+    setSelectedWidgetId('');
+  }, [pages.length]);
+
+  const renamePage = useCallback((pageId: string, newName: string) => {
+    if (!newName.trim()) return;
+    setPages((prev) =>
+      prev.map((p) => (p.id === pageId ? { ...p, name: newName.trim() } : p))
+    );
+    setEditingPageId(null);
   }, []);
 
-  const selectedWidget = widgets.find((w) => w.id === selectedWidgetId) ?? null;
+  const handleSave = useCallback(() => {
+    savePagesToStorage(tableroId, pages);
+    toast.success('Guardado exitosamente');
+    setIsEditing(false);
+  }, [tableroId, pages]);
+
+  const selectedWidget = currentWidgets.find((w) => w.id === selectedWidgetId) ?? null;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#f6f6f8] dark:bg-[#101622] font-display text-slate-900 dark:text-slate-100">
@@ -128,7 +243,7 @@ export function TableroDetailView({ tableroId, tableroNombre = 'Ventas Totales',
           ) : (
             <button
               type="button"
-              onClick={() => setIsEditing(false)}
+              onClick={handleSave}
               className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700"
             >
               <span className="material-symbols-outlined text-[18px]">check</span>
@@ -154,9 +269,9 @@ export function TableroDetailView({ tableroId, tableroNombre = 'Ventas Totales',
         />
       )}
 
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 overflow-hidden relative min-h-0">
         <DashboardCanvas
-          widgets={widgets}
+          widgets={currentWidgets}
           chartData={filteredData}
           selectedWidgetId={selectedWidgetId}
           setSelectedWidgetId={setSelectedWidgetId}
@@ -164,10 +279,14 @@ export function TableroDetailView({ tableroId, tableroNombre = 'Ventas Totales',
           onDeleteWidget={deleteWidget}
           onToggleColSpan={toggleColSpan}
           isEditing={isEditing}
+          fullChartDataForFilters={chartData}
+          activeFilters={activeFilters}
+          onFilterChange={handleFilterChange}
+          onLayoutChange={handleLayoutChange}
         />
         {isEditing && isRightPanelOpen && (
           <RightPropertiesPanel
-            widgets={widgets}
+            widgets={currentWidgets}
             selectedWidgetId={selectedWidgetId}
             updateWidget={updateWidget}
             onCollapse={() => setIsRightPanelOpen(false)}
@@ -183,6 +302,56 @@ export function TableroDetailView({ tableroId, tableroNombre = 'Ventas Totales',
             <span className="material-symbols-outlined text-xl">chevron_left</span>
           </button>
         )}
+      </div>
+
+      {/* Barra de pestañas inferior (estilo Excel) */}
+      <div className="flex-none h-10 border-t border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 flex items-center px-2 gap-0.5 overflow-x-auto shrink-0 z-10">
+        {pages.map((page) => (
+          <div
+            key={page.id}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-t min-w-0 max-w-[160px] border border-b-0 transition-colors ${
+              page.id === currentPageId
+                ? 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white font-medium shadow-sm -mb-px'
+                : 'bg-slate-200/80 dark:bg-slate-800/80 border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer'
+            }`}
+          >
+            {editingPageId === page.id ? (
+              <input
+                type="text"
+                value={editingPageName}
+                onChange={(e) => setEditingPageName(e.target.value)}
+                onBlur={() => renamePage(page.id, editingPageName)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') renamePage(page.id, editingPageName);
+                  if (e.key === 'Escape') setEditingPageId(null);
+                }}
+                className="flex-1 min-w-0 bg-transparent border-none text-sm focus:ring-0 focus:outline-none px-0 py-0"
+                autoFocus
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => page.id !== currentPageId && setCurrentPageId(page.id)}
+                onDoubleClick={() => {
+                  setEditingPageId(page.id);
+                  setEditingPageName(page.name);
+                }}
+                className="flex-1 min-w-0 text-left text-sm truncate"
+              >
+                {page.name}
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={addPage}
+          className="flex items-center justify-center w-8 h-8 rounded text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+          title="Nueva página"
+          aria-label="Nueva página"
+        >
+          <span className="material-symbols-outlined text-xl">add</span>
+        </button>
       </div>
     </div>
   );

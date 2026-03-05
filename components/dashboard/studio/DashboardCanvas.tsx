@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -15,7 +16,11 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import type { ChartType, ChartDataRow, Widget } from './AnalyticsDashboard';
+import { GridLayout, useContainerWidth } from 'react-grid-layout';
+import type { Layout } from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
+import type { ChartType, ChartDataRow, Widget, WidgetLayout } from './AnalyticsDashboard';
 
 const COLORS = ['#135bec', '#0ea5e9', '#8b5cf6', '#ec4899', '#f59e0b'];
 
@@ -27,18 +32,210 @@ type WidgetCardProps = {
   onDelete: () => void;
   onToggleColSpan: () => void;
   isEditing: boolean;
+  fullDataForFilter?: ChartDataRow[];
+  activeFilters?: Record<string, string | string[]>;
+  onFilterChange?: (key: string, value: string | string[]) => void;
 };
 
-function WidgetChart({ widget, data }: { widget: Widget; data: ChartDataRow[] }) {
-  const { type: chartType, xAxis: selectedXAxis, yAxis: selectedYAxis } = widget;
+function computeKpiValue(
+  data: ChartDataRow[],
+  field: string,
+  aggregation: 'sum' | 'avg' | 'count'
+): number {
+  if (aggregation === 'count') return data.length;
+  const sum = data.reduce((acc, row) => acc + (Number((row as Record<string, unknown>)[field]) || 0), 0);
+  if (aggregation === 'avg') return data.length > 0 ? sum / data.length : 0;
+  return sum;
+}
+
+const FILTER_FIELD_LABELS: Record<string, string> = {
+  region: 'Región',
+  product: 'Producto',
+  date: 'Fecha',
+};
+
+type FilterWidgetProps = {
+  widget: Widget & { title?: string };
+  filterField: string;
+  uniqueValues: string[];
+  currentFilterValue: string | string[] | undefined;
+  onFilterChange?: (key: string, value: string | string[]) => void;
+};
+
+const FilterWidget = ({
+  widget,
+  filterField,
+  uniqueValues,
+  currentFilterValue,
+  onFilterChange,
+}: FilterWidgetProps) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDropdownOpen]);
+
+  const currentArray: string[] = Array.isArray(currentFilterValue)
+    ? currentFilterValue
+    : currentFilterValue
+      ? [currentFilterValue]
+      : [];
+
+  return (
+    <div
+      ref={dropdownRef}
+      className="relative w-full h-full flex flex-col justify-center no-drag cancel-drag overflow-visible"
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <span className="text-[10px] font-bold text-slate-500 uppercase mb-0.5 truncate cursor-default">
+        {widget.title || filterField || 'FILTRO'}
+      </span>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsDropdownOpen((open) => !open);
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        className="flex items-center justify-between w-full px-2 py-1.5 bg-white border border-slate-200 rounded shadow-sm text-sm text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors"
+      >
+        <span className="truncate pr-2">
+          {!currentFilterValue ||
+          (Array.isArray(currentFilterValue) && currentFilterValue.length === 0)
+            ? 'Todos'
+            : Array.isArray(currentFilterValue)
+              ? currentFilterValue.join(', ')
+              : currentFilterValue}
+        </span>
+        <span className="text-slate-400 text-[10px] shrink-0">▼</span>
+      </button>
+      {isDropdownOpen && (
+        <div
+          className="absolute top-full left-0 mt-1 w-full min-w-[160px] bg-white border border-slate-200 shadow-xl rounded-md max-h-56 overflow-y-auto z-[99999] p-1.5 custom-scrollbar no-drag cancel-drag"
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+        >
+          <label className="flex items-center px-2 py-1.5 hover:bg-slate-100 cursor-pointer text-xs text-slate-700 rounded transition-colors mb-0.5 w-full">
+            <input
+              type="checkbox"
+              className="mr-2 cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+              checked={!currentFilterValue || currentArray.length === 0}
+              onChange={(e) => {
+                e.stopPropagation();
+                onFilterChange?.(filterField, []);
+              }}
+            />
+            <span className="font-semibold select-none">Seleccionar todo</span>
+          </label>
+          {uniqueValues.map((val) => {
+            const isChecked = currentArray.includes(val);
+            return (
+              <label
+                key={val}
+                className="flex items-center px-2 py-1.5 hover:bg-slate-50 cursor-pointer text-xs text-slate-700 rounded transition-colors w-full"
+              >
+                <input
+                  type="checkbox"
+                  className="mr-2 cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                  checked={isChecked}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    const newValues = isChecked
+                      ? currentArray.filter((v) => v !== val)
+                      : [...currentArray, val];
+                    onFilterChange?.(filterField, newValues);
+                  }}
+                />
+                <span className="truncate select-none">{val}</span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+function WidgetChart({
+  widget,
+  data,
+  fullDataForFilter,
+  activeFilters = {},
+  onFilterChange,
+}: {
+  widget: Widget;
+  data: ChartDataRow[];
+  fullDataForFilter?: ChartDataRow[];
+  activeFilters?: Record<string, string | string[]>;
+  onFilterChange?: (key: string, value: string | string[]) => void;
+}) {
+  const { type: chartType, xAxis: selectedXAxis, yAxis: selectedYAxis, aggregation = 'sum' } = widget;
+  const filterField = selectedXAxis || selectedYAxis[0] || 'region';
+  const rawDataForFilter = fullDataForFilter ?? data;
+  const uniqueValues = useMemo(() => {
+    if (chartType !== 'filter' || !rawDataForFilter?.length) return [];
+    return Array.from(
+      new Set(
+        rawDataForFilter
+          .map((row) => String((row as Record<string, unknown>)[filterField] ?? ''))
+          .filter(Boolean)
+      )
+    ).sort();
+  }, [chartType, rawDataForFilter, filterField]);
+
   const hasX = !!selectedXAxis;
   const hasY = selectedYAxis.length > 0;
   const hasFields = hasX || hasY;
 
-  if (!hasFields) {
+  if (!hasFields && chartType !== 'filter') {
     return (
       <div className="flex items-center justify-center h-[280px] text-slate-400 dark:text-slate-500 text-sm">
         Selecciona ejes en el panel
+      </div>
+    );
+  }
+
+  if (chartType === 'filter') {
+    return (
+      <FilterWidget
+        widget={widget as Widget & { title?: string }}
+        filterField={filterField}
+        uniqueValues={uniqueValues}
+        currentFilterValue={activeFilters[filterField]}
+        onFilterChange={onFilterChange}
+      />
+    );
+  }
+
+  if (chartType === 'kpi') {
+    const field = selectedYAxis[0];
+    const value = field ? computeKpiValue(data, field, aggregation) : 0;
+    const label =
+      aggregation === 'sum'
+        ? `Total ${field ? field.charAt(0).toUpperCase() + field.slice(1) : 'Value'}`
+        : aggregation === 'avg'
+          ? `Avg ${field ? field.charAt(0).toUpperCase() + field.slice(1) : 'Value'}`
+          : 'Count';
+    return (
+      <div className="flex flex-col items-center justify-center h-[280px] p-4">
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+          {label}
+        </p>
+        <p className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white tabular-nums">
+          {typeof value === 'number' && (value > 999 || value < -999)
+            ? value.toLocaleString(undefined, { maximumFractionDigits: 0 })
+            : value.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+        </p>
       </div>
     );
   }
@@ -79,14 +276,14 @@ function WidgetChart({ widget, data }: { widget: Widget; data: ChartDataRow[] })
   }
 
   return (
-    <div className="w-full h-[280px]">
+    <div className="w-full h-full">
       {chartType === 'bar' && (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 12, right: 12, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
             <XAxis dataKey={selectedXAxis ?? undefined} tick={{ fill: 'currentColor', fontSize: 10 }} className="text-slate-500" />
             <YAxis tick={{ fill: 'currentColor', fontSize: 10 }} className="text-slate-500" tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : String(v))} />
-            <Tooltip formatter={(value: number) => [value.toLocaleString(), '']} contentStyle={{ borderRadius: '8px' }} />
+            <Tooltip formatter={(value: number | undefined) => [value != null ? value.toLocaleString() : '', '']} contentStyle={{ borderRadius: '8px' }} />
             <Legend />
             {selectedYAxis.map((key, i) => (
               <Bar key={key} dataKey={key} fill={COLORS[i % COLORS.length]} name={key.charAt(0).toUpperCase() + key.slice(1)} radius={[4, 4, 0, 0]} />
@@ -100,7 +297,7 @@ function WidgetChart({ widget, data }: { widget: Widget; data: ChartDataRow[] })
             <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
             <XAxis dataKey={selectedXAxis ?? undefined} tick={{ fill: 'currentColor', fontSize: 10 }} className="text-slate-500" />
             <YAxis tick={{ fill: 'currentColor', fontSize: 10 }} className="text-slate-500" tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : String(v))} />
-            <Tooltip formatter={(value: number) => [value.toLocaleString(), '']} contentStyle={{ borderRadius: '8px' }} />
+            <Tooltip formatter={(value: number | undefined) => [value != null ? value.toLocaleString() : '', '']} contentStyle={{ borderRadius: '8px' }} />
             <Legend />
             {selectedYAxis.map((key, i) => (
               <Line key={key} type="monotone" dataKey={key} stroke={COLORS[i % COLORS.length]} name={key.charAt(0).toUpperCase() + key.slice(1)} strokeWidth={2} dot={{ r: 3 }} />
@@ -118,13 +315,13 @@ function WidgetChart({ widget, data }: { widget: Widget; data: ChartDataRow[] })
               cx="50%"
               cy="50%"
               outerRadius={100}
-              label={({ [selectedXAxis ?? 'date']: label }) => String(label)}
+              label={((props: { name?: string }) => String(props.name ?? '')) as (props: unknown) => React.ReactNode}
             >
               {data.map((_, i) => (
                 <Cell key={i} fill={COLORS[i % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(value: number) => [value.toLocaleString(), selectedYAxis[0] ?? '']} />
+            <Tooltip formatter={(value: number | undefined) => [value != null ? value.toLocaleString() : '', selectedYAxis[0] ?? '']} />
             <Legend />
           </PieChart>
         </ResponsiveContainer>
@@ -133,23 +330,34 @@ function WidgetChart({ widget, data }: { widget: Widget; data: ChartDataRow[] })
   );
 }
 
-function WidgetCard({ widget, isSelected, data, onSelect, onDelete, onToggleColSpan, isEditing }: WidgetCardProps) {
+function WidgetCard({
+  widget,
+  isSelected,
+  data,
+  onSelect,
+  onDelete,
+  onToggleColSpan,
+  isEditing,
+  fullDataForFilter,
+  activeFilters,
+  onFilterChange,
+}: WidgetCardProps) {
+  const isFilter = widget.type === 'filter';
   return (
     <div
       role={isEditing ? 'button' : undefined}
       tabIndex={isEditing ? 0 : undefined}
       onClick={isEditing ? () => onSelect() : undefined}
       onKeyDown={isEditing ? (e) => e.key === 'Enter' && onSelect() : undefined}
-      className={`min-h-full flex flex-col rounded-lg border-2 bg-white dark:bg-slate-900 overflow-hidden transition-colors ${
+      className={`w-full h-full absolute inset-0 flex flex-col rounded-lg transition-colors ${isFilter ? 'overflow-visible z-50' : 'overflow-hidden z-10'} ${
         isEditing
-          ? `cursor-pointer ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'}`
-          : 'border-slate-200 dark:border-slate-700 cursor-default'
+          ? `border-2 cursor-pointer bg-white dark:bg-slate-900 ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'}`
+          : 'border border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 cursor-default'
       }`}
-      style={{ gridColumn: widget.colSpan === 2 ? 'span 2' : undefined }}
       data-selected={isSelected}
       data-widget-id={widget.id}
     >
-      {isEditing && (
+      {isEditing && !isFilter && (
         <div className="flex items-center justify-end gap-1 px-2 py-1.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
@@ -171,12 +379,40 @@ function WidgetCard({ widget, isSelected, data, onSelect, onDelete, onToggleColS
           </button>
         </div>
       )}
-      <div className="p-3 flex-1 min-h-0 flex flex-col">
-        <WidgetChart widget={widget} data={data} />
+      <div className={`flex-1 min-h-0 flex flex-col ${isFilter ? 'p-0' : 'p-3 overflow-y-auto custom-scrollbar'}`}>
+        <div className="relative flex-1 min-h-0">
+          <WidgetChart
+            widget={widget}
+            data={data}
+            fullDataForFilter={fullDataForFilter}
+            activeFilters={activeFilters}
+            onFilterChange={onFilterChange}
+          />
+          {isEditing && !isFilter && <div className="absolute inset-0 z-10 cursor-pointer" />}
+        </div>
       </div>
     </div>
   );
 }
+
+/** Construye layout para react-grid-layout desde widgets (usa layout guardado o default por índice). Filtros: ultra compactos (w:2, h:1), minH:1 para permitir aplastarlos. */
+function buildLayoutFromWidgets(widgets: Widget[]): Layout {
+  return widgets.map((w, i) => {
+    const isFilter = w.type === 'filter';
+    return {
+      i: w.id,
+      x: w.layout?.x ?? 0,
+      y: w.layout?.y ?? i * 3,
+      w: w.layout?.w ?? (isFilter ? 2 : (w.colSpan === 2 ? 12 : 6)),
+      h: w.layout?.h ?? (isFilter ? 1 : 3),
+      minW: isFilter ? 2 : 2,
+      minH: isFilter ? 1 : 1,
+      maxH: isFilter ? 2 : undefined,
+    };
+  });
+}
+
+export type LayoutItem = { i: string; x: number; y: number; w: number; h: number };
 
 type CanvasProps = {
   widgets: Widget[];
@@ -188,9 +424,17 @@ type CanvasProps = {
   onToggleColSpan: (id: string) => void;
   /** Si false, oculta + Add Chart, botones eliminar/redimensionar y desactiva selección. Por defecto true. */
   isEditing?: boolean;
+  /** Datos sin filtrar para poblar opciones de widgets tipo "filter". */
+  fullChartDataForFilters?: ChartDataRow[];
+  /** Filtros activos (clave = campo, valor = string o string[] para multi-selección). */
+  activeFilters?: Record<string, string | string[]>;
+  /** Callback al cambiar un filtro desde un widget tipo "filter". */
+  onFilterChange?: (key: string, value: string | string[]) => void;
+  /** Callback cuando el usuario mueve/redimensiona (react-grid-layout). */
+  onLayoutChange?: (layout: LayoutItem[]) => void;
 };
 
-/** Lienzo en grid: múltiples widgets, vacío amigable, + Add Chart (solo en modo edición). */
+/** Lienzo con react-grid-layout: drag & resize en edición, estático en lectura. */
 export function DashboardCanvas({
   widgets,
   chartData,
@@ -200,11 +444,45 @@ export function DashboardCanvas({
   onDeleteWidget,
   onToggleColSpan,
   isEditing = true,
+  fullChartDataForFilters,
+  activeFilters = {},
+  onFilterChange,
+  onLayoutChange,
 }: CanvasProps) {
   const isEmpty = widgets.length === 0;
+  const { width, containerRef, mounted } = useContainerWidth({ measureBeforeMount: false, initialWidth: 1200 });
+  const layout = useMemo(() => buildLayoutFromWidgets(widgets), [widgets]);
+
+  const handleLayoutChange = useCallback(
+    (newLayout: Layout) => {
+      onLayoutChange?.(newLayout.map((item) => ({ i: item.i, x: item.x, y: item.y, w: item.w, h: item.h })));
+    },
+    [onLayoutChange]
+  );
 
   return (
-    <main className="flex-1 flex flex-col relative bg-slate-50 dark:bg-[#0b101a] overflow-hidden">
+    <>
+      <style>{`
+        .react-resizable-handle {
+          z-index: 50 !important;
+        }
+        .react-resizable-handle-s,
+        .react-resizable-handle-n {
+          height: 12px !important;
+        }
+        .react-resizable-handle-e,
+        .react-resizable-handle-w {
+          width: 12px !important;
+        }
+        .react-resizable-handle-se,
+        .react-resizable-handle-sw,
+        .react-resizable-handle-ne,
+        .react-resizable-handle-nw {
+          width: 20px !important;
+          height: 20px !important;
+        }
+      `}</style>
+      <main className={`flex-1 flex flex-col relative overflow-hidden ${isEditing ? 'bg-slate-50 dark:bg-[#0b101a]' : 'bg-slate-50 dark:bg-slate-900'}`}>
       {isEditing && (
         <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 h-12 shrink-0">
           <button
@@ -224,11 +502,16 @@ export function DashboardCanvas({
       )}
 
       <div
-        className="flex-1 overflow-auto p-6 min-h-0"
-        style={{
-          backgroundSize: '20px 20px',
-          backgroundImage: 'linear-gradient(to right, #e2e8f0 1px, transparent 1px), linear-gradient(to bottom, #e2e8f0 1px, transparent 1px)',
-        }}
+        className={`flex-1 overflow-auto p-6 min-h-0 ${isEditing ? '' : 'bg-slate-50 dark:bg-slate-900'}`}
+        style={
+          isEditing
+            ? {
+                backgroundSize: '20px 20px',
+                backgroundImage:
+                  'linear-gradient(to right, #e2e8f0 1px, transparent 1px), linear-gradient(to bottom, #e2e8f0 1px, transparent 1px)',
+              }
+            : undefined
+        }
       >
         {isEditing && (
           <button
@@ -248,6 +531,45 @@ export function DashboardCanvas({
               {isEditing ? 'No hay gráficos. Usa el botón de arriba para añadir uno.' : 'No hay gráficos en este tablero.'}
             </p>
           </div>
+        ) : mounted && width > 0 ? (
+          <div ref={containerRef} className="relative w-full max-w-[1400px] mx-auto">
+            <GridLayout
+              className="layout"
+              layout={layout}
+              onLayoutChange={handleLayoutChange}
+              width={width}
+              draggableCancel=".no-drag, .cancel-drag, input, select, textarea, button"
+              gridConfig={{
+                cols: 12,
+                rowHeight: 80,
+                margin: [16, 16],
+                containerPadding: [0, 0],
+                maxRows: Infinity,
+              }}
+              dragConfig={{ handle: isEditing ? undefined : '.no-drag', enabled: isEditing, bounded: false, threshold: 3, cancel: '.no-drag, .cancel-drag, select, input, textarea, button' }}
+              resizeConfig={{
+                enabled: isEditing,
+                handles: ['s', 'w', 'e', 'n', 'sw', 'nw', 'se', 'ne'],
+              }}
+            >
+              {widgets.map((w) => (
+                <div key={w.id} className="w-full h-full relative">
+                  <WidgetCard
+                    widget={w}
+                    isSelected={selectedWidgetId === w.id}
+                    data={chartData}
+                    onSelect={() => setSelectedWidgetId(w.id)}
+                    onDelete={() => onDeleteWidget(w.id)}
+                    onToggleColSpan={() => onToggleColSpan(w.id)}
+                    isEditing={isEditing}
+                    fullDataForFilter={fullChartDataForFilters}
+                    activeFilters={activeFilters}
+                    onFilterChange={onFilterChange}
+                  />
+                </div>
+              ))}
+            </GridLayout>
+          </div>
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 auto-rows-[400px] max-w-[1400px] mx-auto">
             {widgets.map((w) => (
@@ -260,6 +582,9 @@ export function DashboardCanvas({
                 onDelete={() => onDeleteWidget(w.id)}
                 onToggleColSpan={() => onToggleColSpan(w.id)}
                 isEditing={isEditing}
+                fullDataForFilter={fullChartDataForFilters}
+                activeFilters={activeFilters}
+                onFilterChange={onFilterChange}
               />
             ))}
           </div>
@@ -273,6 +598,7 @@ export function DashboardCanvas({
           </button>
         </div>
       )}
-    </main>
+      </main>
+    </>
   );
 }

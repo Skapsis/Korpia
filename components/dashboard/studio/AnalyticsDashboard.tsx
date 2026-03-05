@@ -5,7 +5,11 @@ import { TopBar } from './TopBar';
 import { DashboardCanvas } from './DashboardCanvas';
 import { RightPropertiesPanel } from './RightPropertiesPanel';
 
-export type ChartType = 'bar' | 'line' | 'pie' | 'table';
+export type ChartType = 'bar' | 'line' | 'pie' | 'table' | 'kpi' | 'filter';
+
+export type AggregationType = 'sum' | 'avg' | 'count';
+
+export type WidgetLayout = { x: number; y: number; w: number; h: number };
 
 export type Widget = {
   id: string;
@@ -13,6 +17,10 @@ export type Widget = {
   xAxis: string | null;
   yAxis: string[];
   colSpan: number;
+  /** Agregación para medidas (por defecto 'sum'). Usado en KPI y opcionalmente en otros. */
+  aggregation?: AggregationType;
+  /** Posición y tamaño en el grid (react-grid-layout). Si no existe, se deriva de colSpan e índice. */
+  layout?: WidgetLayout;
 };
 
 const MONTH_SHORT: Record<number, string> = {

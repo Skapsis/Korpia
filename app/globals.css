@@ -74,3 +74,32 @@ body {
     box-shadow: none !important;
   }
 }
+
+/* Barra de scroll sutil para tarjetas de widgets (tablas, listas, filtros) */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: theme('colors.slate.300') transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: theme('colors.slate.300');
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: theme('colors.slate.400');
+}
+.dark .custom-scrollbar {
+  scrollbar-color: theme('colors.slate.600') transparent;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: theme('colors.slate.600');
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: theme('colors.slate.500');
+}

@@ -1,9 +1,12 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useGridEditing } from './GridEditingContext';
 
 export function MainHeader() {
+  const pathname = usePathname();
   const { isEditingGrid, setIsEditingGrid } = useGridEditing();
+  const isTableroDetail = pathname.includes('/dashboard/tablero');
 
   return (
     <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-6 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/95">
@@ -19,12 +22,14 @@ export function MainHeader() {
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <div className="mr-2 hidden md:flex items-center gap-2">
-          <button type="button" className="flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
-            <span className="material-symbols-outlined text-[18px]" aria-hidden>calendar_today</span>
-            <span>Live View</span>
-          </button>
-        </div>
+        {!isTableroDetail && (
+          <div className="mr-2 hidden md:flex items-center gap-2">
+            <button type="button" className="flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
+              <span className="material-symbols-outlined text-[18px]" aria-hidden>calendar_today</span>
+              <span>Live View</span>
+            </button>
+          </div>
+        )}
         <button type="button" className="relative rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100">
           <span className="material-symbols-outlined text-[20px]" aria-hidden>notifications</span>
           <span className="absolute top-2 right-2 h-2 w-2 rounded-full border-2 border-white bg-red-500 dark:border-zinc-900" />
