@@ -1,0 +1,62 @@
+# Korpia2 - Biblia del Proyecto (Portal BI)
+
+Eres un experto en Next.js (App Router), React 19, Tailwind CSS, Prisma y Auth.js. Tu objetivo es mantener Korpia2 limpio, rápido y funcional, respetando siempre esta arquitectura y patrones.
+
+---
+
+## Stack Tecnológico
+
+- **Framework:** Next.js 15+ (App Router). No uses la carpeta `src/`. Todo va en `/app`, `/components`, `/lib`.
+- **UI:** React 19, Tailwind CSS 4. Estilos solo con Tailwind; `app/globals.css` minimalista (directivas de Tailwind).
+- **Base de datos:** Prisma con SQLite. Cliente único en `lib/prisma.ts` (patrón Singleton con `globalThis.prismaGlobal`).
+- **Autenticación:** Auth.js v5 (NextAuth) con provider Credentials y JWT.
+- **Iconos:** Siempre `lucide-react`.
+- **Importante:** No inventes versiones de paquetes; consulta `package.json` o usa `@latest`.
+
+---
+
+## Arquitectura Korpia2 vs Superset
+
+- **Korpia2** es el **Portal / Vitrina**: gestiona usuarios, roles, carpetas, accesos y muestra KPIs nativos en tarjetas ultrarrápidas. Es la capa que el usuario ve y desde la que navega.
+- **Apache Superset** es el **Motor Analítico**: corre en Docker (p. ej. `localhost:8088`). No sustituye a Korpia2; Korpia2 se comunica con Superset para contenido pesado.
+- **Integración:** Korpia2 incrusta dashboards de Superset vía iframes usando **Guest Tokens**. El token se genera en `app/api/superset/token/route.ts` (login admin → guest_token con usuario y RLS). El front usa `@superset-ui/embedded-sdk` y el componente `SupersetDashboard`. Si la URL de Superset no está configurada, se usa el mockup visual "Mago de Oz".
+
+---
+
+## Patrones de React y Next.js
+
+- **Server Components por defecto.** Usa `'use client'` solo cuando haga falta interactividad (formularios con estado, SDK de Superset, etc.).
+- **Mutaciones con Server Actions:** Todas las acciones con `'use server'` viven en `app/actions/` (p. ej. `folder.ts`, `dashboard.ts`, `user.ts`, `login.ts`, `logout.ts`). En el cliente se consumen con **useActionState** (o useFormState); la firma típica es `(prevState, formData) => Promise<state>`.
+- **Datos en servidor:** No uses `useEffect` para cargar datos. Usa fetch nativo de Next.js o **Prisma directamente** en componentes asíncronos (Server Components). Las listas (carpetas, usuarios, dashboards) se obtienen en el Server Component de la página o del layout.
+- **Estructura de rutas:** Rutas protegidas y layout con sidebar dentro del Route Group `app/(dashboard)/`. Componentes globales en `/components`, utilidades y Prisma en `/lib`.
+
+---
+
+## Seguridad y Autenticación
+
+- **Login:** Auth.js v5 con provider **Credentials**. Contraseñas con **bcryptjs** (hash en creación/seed, compare en `auth.ts` → `authorize`). Página de login en `/login`; Server Action de login en `app/actions/login.ts` con patrón oficial: `signIn("credentials", { email, password, redirectTo: "/folder" })` y en el catch solo devolver error para `AuthError`; para cualquier otro error (p. ej. **NEXT_REDIRECT**) hacer **throw error** para no tragar la redirección.
+- **Protección de rutas:** En `middleware.ts` se usa `auth()` de Auth.js. Usuario no logueado y ruta distinta de `/login` → redirect a `/login`. Ruta `/admin` solo permitida si `session.user.role === "ADMIN"`; si no, redirect a `/folder`.
+- **RLS (Row Level Security):** En la API de Superset (`app/api/superset/token/route.ts`) se inyecta la sesión de Auth.js en el Guest Token: usuario real (email, name), y reglas RLS según rol (USER → array de cláusulas; ADMIN → array vacío para ver todo).
+
+---
+
+## Flujo de Interfaz
+
+- **Carpetas:** La vista `app/(dashboard)/folder/[id]/page.tsx` muestra un **grid de tarjetas nativas** (no iframes). Cada tarjeta corresponde a un `DashboardLink` y muestra título, descripción y, si existen, **kpiValue** (texto grande) y **kpiTrend** (verde/rojo según +/-). Al hacer clic se navega a `/dashboard/[linkId]`.
+- **Dashboard pesado:** La ruta `app/(dashboard)/dashboard/[linkId]/page.tsx` muestra el header (volver a la carpeta, título, descripción) y el componente **SupersetDashboard** a ancho completo, que embebe el iframe de Superset (o el Mago de Oz si no hay URL/UUID).
+- **Sidebar:** Dinámico según sesión. Si rol ADMIN: todas las carpetas y enlace "Administración" (`/admin`). Si rol USER: solo carpetas con `FolderAccess` para ese usuario. Botón "Cerrar sesión" con Server Action que llama a `signOut`.
+
+---
+
+## Modelo de Datos (Prisma)
+
+- **User:** id, email, name, password, role (USER | ADMIN), folderAccess.
+- **Folder:** id, name, description, order, folderAccess, dashboardLinks.
+- **FolderAccess:** userId, folderId, role (viewer | editor | admin); define qué carpetas ve cada USER.
+- **DashboardLink:** folderId, title, description, url (UUID Superset), order, kpiValue, kpiTrend.
+
+---
+
+## Limpieza y Convenciones
+
+- No dejar boilerplate de Next.js (SVG en `/public`, ejemplos en `page.tsx`). No duplicar rutas (p. ej. no `app/dashboard` si ya existe `app/(dashboard)/dashboard`).

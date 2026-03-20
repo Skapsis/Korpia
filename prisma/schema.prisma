@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  password      String
+  role          String         @default("USER")
+  groupId       String?
+  group         Group?         @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  folderAccess  FolderAccess[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Group {
+  id                 String                 @id @default(cuid())
+  name               String                 @unique
+  description        String?
+  users              User[]
+  dashboardAccess    GroupDashboardAccess[]
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+}
+
+model GroupDashboardAccess {
+  id             String        @id @default(cuid())
+  groupId        String
+  dashboardId     String
+  group          Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  dashboard   DashboardLink @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([groupId, dashboardId])
+  @@index([groupId])
+  @@index([dashboardId])
+}
+
+model Folder {
+  id             String          @id @default(cuid())
+  name           String
+  description    String?
+  order          Int             @default(0)
+  folderAccess   FolderAccess[]
+  dashboardLinks DashboardLink[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model FolderAccess {
+  id        String   @id @default(cuid())
+  userId    String
+  folderId  String
+  role      String   @default("viewer") // viewer | editor | admin
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder    Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, folderId])
+  @@index([userId])
+  @@index([folderId])
+}
+
+model DashboardLink {
+  id                   String                 @id @default(cuid())
+  folderId             String
+  title                String
+  description          String?
+  url                  String   // URL del dashboard en Superset o externo
+  order                Int      @default(0)
+  kpiValue             String?  // Ej: "$1.2M"
+  kpiTrend             String?  // Ej: "+15%"
+  folder               Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  groupDashboardAccess GroupDashboardAccess[]
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([folderId])
+}
