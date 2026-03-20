@@ -296,7 +296,7 @@ export default async function AdminPage() {
                     <input type="hidden" name="groupId" value={group.id} />
                     <div className="max-h-48 space-y-1.5 overflow-y-auto">
                       {folders.map((folder: any) => {
-                        const dashboardsInFolder = allDashboards.filter((d) => d.folderId === folder.id);
+                        const dashboardsInFolder = allDashboards.filter((d: any) => d.folderId === folder.id);
                         if (dashboardsInFolder.length === 0) return null;
                         return (
                           <div key={folder.id} className="space-y-1">
@@ -310,7 +310,7 @@ export default async function AdminPage() {
                                   type="checkbox"
                                   name="dashboardIds"
                                   value={dash.id}
-                                  defaultChecked={group.dashboardAccess.some((a) => a.dashboardId === dash.id)}
+                                  defaultChecked={group.dashboardAccess.some((a: any) => a.dashboardId === dash.id)}
                                   className="rounded border-zinc-300 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800"
                                 />
                                 {dash.title}
@@ -494,7 +494,7 @@ export default async function AdminPage() {
                               name="folderIds"
                               value={folder.id}
                               defaultChecked={user.folderAccess.some(
-                                (a) => a.folderId === folder.id
+                                (a: any) => a.folderId === folder.id
                               )}
                               className="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800"
                             />
