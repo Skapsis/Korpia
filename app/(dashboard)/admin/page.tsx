@@ -95,7 +95,7 @@ export default async function AdminPage() {
                 </p>
               ) : (
                 <ul className="space-y-4">
-                  {folders.map((folder) => (
+                  {folders.map((folder: any) => (
                     <li
                       key={folder.id}
                       className="rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800"
@@ -484,7 +484,7 @@ export default async function AdminPage() {
                     >
                       <input type="hidden" name="userId" value={user.id} />
                       <div className="max-h-40 space-y-1.5 overflow-y-auto">
-                        {folders.map((folder) => (
+                        {folders.map((folder: any) => (
                           <label
                             key={folder.id}
                             className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300"
