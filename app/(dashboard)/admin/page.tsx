@@ -136,7 +136,7 @@ export default async function AdminPage() {
                           </p>
                         ) : (
                           <ul className="mb-3 space-y-1.5">
-                            {folder.dashboardLinks.map((dash) => (
+                            {folder.dashboardLinks.map((dash: any) => (
                               <li
                                 key={dash.id}
                                 className="flex items-center justify-between gap-2 rounded-md bg-white py-1.5 pl-2 pr-1 dark:bg-zinc-900"
@@ -267,7 +267,7 @@ export default async function AdminPage() {
             </details>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {groups.map((group) => (
+            {groups.map((group: any) => (
               <div
                 key={group.id}
                 className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
@@ -295,13 +295,13 @@ export default async function AdminPage() {
                   <form action={updateGroupDashboards} className="mt-3 flex flex-col gap-2">
                     <input type="hidden" name="groupId" value={group.id} />
                     <div className="max-h-48 space-y-1.5 overflow-y-auto">
-                      {folders.map((folder) => {
+                      {folders.map((folder: any) => {
                         const dashboardsInFolder = allDashboards.filter((d) => d.folderId === folder.id);
                         if (dashboardsInFolder.length === 0) return null;
                         return (
                           <div key={folder.id} className="space-y-1">
                             <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{folder.name}</p>
-                            {dashboardsInFolder.map((dash) => (
+                            {dashboardsInFolder.map((dash: any) => (
                               <label
                                 key={dash.id}
                                 className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300"
@@ -407,7 +407,7 @@ export default async function AdminPage() {
                     className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                   >
                     <option value="">Sin grupo</option>
-                    {groups.map((g) => (
+                    {groups.map((g: any) => (
                       <option key={g.id} value={g.id}>
                         {g.name}
                       </option>
@@ -425,7 +425,7 @@ export default async function AdminPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {users.map((user) => (
+            {users.map((user: any) => (
               <div
                 key={user.id}
                 className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
@@ -459,7 +459,7 @@ export default async function AdminPage() {
                     defaultValue={user.groupId ?? ""}
                   >
                     <option value="">Sin grupo</option>
-                    {groups.map((g) => (
+                    {groups.map((g: any) => (
                       <option key={g.id} value={g.id}>
                         {g.name}
                       </option>
