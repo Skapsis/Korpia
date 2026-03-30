@@ -45,7 +45,18 @@ export async function POST(req: Request) {
     const adminPassword = process.env.SUPERSET_ADMIN_PASSWORD?.trim();
 
     if (!supersetUrl || !adminUsername || !adminPassword) {
-      return NextResponse.json({ guestToken: "mock_token", token: "mock_token", mock: true });
+      console.error("[Superset token] Missing required env vars", {
+        hasSupersetUrl: Boolean(supersetUrl),
+        hasAdminUsername: Boolean(adminUsername),
+        hasAdminPassword: Boolean(adminPassword),
+      });
+      return NextResponse.json(
+        {
+          error:
+            "Superset env vars are missing. Required: SUPERSET_URL, SUPERSET_ADMIN_USERNAME, SUPERSET_ADMIN_PASSWORD.",
+        },
+        { status: 500 }
+      );
     }
 
     const baseUrl = supersetUrl.replace(/\/$/, "");
@@ -62,9 +73,13 @@ export async function POST(req: Request) {
 
     if (!loginRes.ok) {
       const loginError = await loginRes.text();
+      console.error("[Superset token] Login failed", {
+        status: loginRes.status,
+        body: loginError,
+      });
       return NextResponse.json(
         { error: "Superset login failed", details: loginError.slice(0, 250) },
-        { status: 500 }
+        { status: loginRes.status >= 400 ? loginRes.status : 500 }
       );
     }
 
@@ -92,9 +107,13 @@ export async function POST(req: Request) {
 
     if (!guestRes.ok) {
       const guestError = await guestRes.text();
+      console.error("[Superset token] Guest token failed", {
+        status: guestRes.status,
+        body: guestError,
+      });
       return NextResponse.json(
         { error: "Superset guest_token failed", details: guestError.slice(0, 250) },
-        { status: 500 }
+        { status: guestRes.status >= 400 ? guestRes.status : 500 }
       );
     }
 
@@ -103,8 +122,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Superset guest token missing" }, { status: 500 });
     }
 
-    return NextResponse.json({ guestToken: guestData.token, token: guestData.token, mock: false });
+    return NextResponse.json({ guestToken: guestData.token, token: guestData.token });
   } catch (error) {
+    console.error("[Superset token] Unexpected error", error);
     const message = error instanceof Error ? error.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
