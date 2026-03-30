@@ -8,6 +8,10 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Next.js sustituye NEXT_PUBLIC_* en el cliente durante `npm run build`; debe existir en esta etapa.
+ARG NEXT_PUBLIC_SUPERSET_URL
+ENV NEXT_PUBLIC_SUPERSET_URL=$NEXT_PUBLIC_SUPERSET_URL
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
