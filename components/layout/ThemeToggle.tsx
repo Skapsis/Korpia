@@ -2,6 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { Moon, Sun } from "lucide-react";
 
 export default function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -11,22 +12,21 @@ export default function ThemeToggle() {
     setMounted(true);
   }, []);
 
-  if (!mounted) return <div className="w-9 h-9" />;
+  if (!mounted) {
+    return <div className="h-9 w-9 shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-800" aria-hidden />;
+  }
+
+  const isDark = resolvedTheme === "dark";
 
   return (
-    <div className="relative group flex items-center justify-center">
-      <button
-        type="button"
-        onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-        className="p-2 rounded-md bg-gray-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-gray-300 dark:hover:bg-zinc-700 transition-colors"
-        aria-label="Cambiar tema"
-      >
-        {resolvedTheme === "dark" ? "☀️" : "🌙"}
-      </button>
-
-      <span className="absolute bottom-full mb-2 hidden group-hover:block whitespace-nowrap bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        {resolvedTheme === "dark" ? "Modo Claro" : "Modo Oscuro"}
-      </span>
-    </div>
+    <button
+      type="button"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      title={isDark ? "Modo claro" : "Modo oscuro"}
+      aria-label={isDark ? "Activar modo claro" : "Activar modo oscuro"}
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+    >
+      {isDark ? <Sun className="h-[18px] w-[18px]" strokeWidth={2} /> : <Moon className="h-[18px] w-[18px]" strokeWidth={2} />}
+    </button>
   );
 }

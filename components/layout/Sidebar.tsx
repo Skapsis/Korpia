@@ -3,7 +3,6 @@ import { Folder, LayoutDashboard, LogOut, Settings, User } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { logoutAction } from "@/app/actions/logout";
-import ThemeToggle from "@/components/layout/ThemeToggle";
 
 export async function Sidebar() {
   const session = await auth();
@@ -69,8 +68,6 @@ export async function Sidebar() {
           <User className="h-4 w-4 shrink-0" />
           Perfil
         </Link>
-
-        <ThemeToggle />
 
         <div className="mb-2 rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/60">
           <p className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-100">{userDisplayName}</p>
