@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { embedDashboard } from "@superset-ui/embedded-sdk";
 import { BarChart4, Loader2 } from "lucide-react";
+import { resolveSupersetEmbedDashboardId } from "@/lib/supersetEmbed";
 
+/** Suele ser `dashboard.url` desde Prisma: UUID o URL que contenga el UUID. */
 type SupersetDashboardProps = {
   dashboardId: string;
 };
@@ -39,16 +41,35 @@ function DashboardPlaceholder() {
   );
 }
 
+function MissingSupersetUrlMessage() {
+  return (
+    <div className="flex min-h-[600px] w-full flex-col items-center justify-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center dark:border-amber-900/50 dark:bg-amber-950/30">
+      <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Superset no está configurado en el cliente</p>
+      <p className="max-w-md text-sm text-amber-800/90 dark:text-amber-200/90">
+        Falta la variable de entorno <code className="rounded bg-amber-100 px-1 py-0.5 text-xs dark:bg-amber-900/60">NEXT_PUBLIC_SUPERSET_URL</code> con la URL pública
+        de tu instancia pública. Defínela en el entorno de build/despliegue y vuelve a desplegar (Next.js inlinéa las variables NEXT_PUBLIC en el cliente).
+      </p>
+    </div>
+  );
+}
+
 export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
   const mountPointRef = useRef<HTMLDivElement>(null);
   const embeddedRef = useRef<EmbeddedDashboardInstance | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const validDashboardId = isValidDashboardId(dashboardId);
+  const embedDashboardId = useMemo(
+    () => resolveSupersetEmbedDashboardId(dashboardId),
+    [dashboardId]
+  );
+  const validDashboardId = isValidDashboardId(embedDashboardId);
+  const supersetPublicUrl = process.env.NEXT_PUBLIC_SUPERSET_URL?.trim() ?? "";
+  const supersetDomain = supersetPublicUrl.replace(/\/$/, "");
+  const hasSupersetUrl = supersetDomain.length > 0;
 
   useEffect(() => {
-    if (!validDashboardId || !mountPointRef.current) {
+    if (!hasSupersetUrl || !validDashboardId || !mountPointRef.current) {
       setLoading(false);
       return;
     }
@@ -62,18 +83,15 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
       mountPointRef.current!.innerHTML = "";
 
       try {
-        const supersetDomain =
-          process.env.NEXT_PUBLIC_SUPERSET_URL?.replace(/\/$/, "") || "http://localhost:8088";
-
         const instance = (await embedDashboard({
-          id: dashboardId,
+          id: embedDashboardId,
           supersetDomain,
           mountPoint: mountPointRef.current as HTMLDivElement,
           fetchGuestToken: async () => {
             const response = await fetch("/api/superset/token", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ dashboardId }),
+              body: JSON.stringify({ dashboardId: embedDashboardId }),
             });
 
             const data = (await response.json()) as GuestTokenApiResponse;
@@ -119,10 +137,14 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
         mountPointRef.current.innerHTML = "";
       }
     };
-  }, [dashboardId, validDashboardId]);
+  }, [embedDashboardId, validDashboardId, hasSupersetUrl, supersetDomain]);
 
   if (!validDashboardId) {
     return <DashboardPlaceholder />;
+  }
+
+  if (!hasSupersetUrl) {
+    return <MissingSupersetUrlMessage />;
   }
 
   return (
