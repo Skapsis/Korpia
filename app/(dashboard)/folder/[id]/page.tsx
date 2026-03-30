@@ -46,16 +46,16 @@ export default async function FolderPage({
   return (
     <div className="p-6">
       <header>
-        <h1 className="text-3xl font-bold text-gray-900">{folder.name}</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-zinc-100">{folder.name}</h1>
         {folder.description ? (
-          <p className="mt-2 text-sm text-gray-500">{folder.description}</p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-zinc-400">{folder.description}</p>
         ) : null}
       </header>
 
       {folder.dashboardLinks.length === 0 ? (
-        <div className="mt-8 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center">
-          <LayoutDashboard className="mx-auto h-12 w-12 text-zinc-400" />
-          <p className="mt-2 text-sm text-zinc-500">Aún no hay dashboards en esta carpeta.</p>
+        <div className="mt-8 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center dark:border-zinc-700 dark:bg-zinc-900">
+          <LayoutDashboard className="mx-auto h-12 w-12 text-zinc-400 dark:text-zinc-500" />
+          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Aún no hay dashboards en esta carpeta.</p>
         </div>
       ) : (
         <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">

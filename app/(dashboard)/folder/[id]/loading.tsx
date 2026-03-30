@@ -8,7 +8,7 @@ export default function FolderLoading() {
 
       <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="rounded-xl border border-gray-200 bg-white p-6">
+          <div key={index} className="rounded-xl border border-gray-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 p-6">
             <div className="mb-4 flex items-center gap-3">
               <Skeleton className="h-8 w-8 rounded-full" />
               <Skeleton className="h-5 w-2/3" />
