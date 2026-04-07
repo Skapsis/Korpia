@@ -53,3 +53,67 @@ export async function toggleFolderAccess(
     };
   }
 }
+
+export async function setUserFolderAccess(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const userId = (formData.get("userId") as string | null)?.trim();
+  const allowFolderIds = formData
+    .getAll("allowFolderIds")
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter(Boolean);
+  const denyFolderIds = formData
+    .getAll("denyFolderIds")
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter(Boolean);
+
+  if (!userId) {
+    return {
+      success: false,
+      error: "Usuario inválido para actualizar permisos.",
+    };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.folderAccess.deleteMany({
+        where: { userId },
+      });
+
+      if (allowFolderIds.length > 0 || denyFolderIds.length > 0) {
+        const allowIds = Array.from(new Set(allowFolderIds.filter((id) => !denyFolderIds.includes(id))));
+        const denyIds = Array.from(new Set(denyFolderIds));
+        await tx.folderAccess.createMany({
+          data: [
+            ...allowIds.map((folderId) => ({
+              userId,
+              folderId,
+              role: "viewer",
+              isDenied: false,
+            })),
+            ...denyIds.map((folderId) => ({
+              userId,
+              folderId,
+              role: "viewer",
+              isDenied: true,
+            })),
+          ],
+          skipDuplicates: true,
+        });
+      }
+    });
+
+    revalidatePath("/admin");
+    return {
+      success: true,
+      message: "Permisos actualizados correctamente.",
+      error: null,
+    };
+  } catch {
+    return {
+      success: false,
+      error: "No se pudieron actualizar los permisos de carpeta.",
+    };
+  }
+}

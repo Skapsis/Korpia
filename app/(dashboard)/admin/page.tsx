@@ -19,7 +19,8 @@ export default async function AdminPage() {
         name: true,
         email: true,
         role: true,
-        folderAccess: { select: { folderId: true } },
+        groupId: true,
+        folderAccess: { select: { folderId: true, isDenied: true } },
       },
       orderBy: { email: "asc" },
     }),
@@ -171,6 +172,21 @@ export default async function AdminPage() {
               >
                 <div>
                   <label
+                    htmlFor="user-name"
+                    className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                  >
+                    Nombre
+                  </label>
+                  <input
+                    id="user-name"
+                    name="name"
+                    type="text"
+                    placeholder="Nombre del usuario"
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+                  />
+                </div>
+                <div>
+                  <label
                     htmlFor="user-email"
                     className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
                   >
@@ -245,7 +261,7 @@ export default async function AdminPage() {
           </div>
 
           <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-            <UserTable users={users as UserTableRow[]} />
+            <UserTable users={users as UserTableRow[]} groups={groups.map((group) => ({ id: group.id, name: group.name }))} />
           </div>
         </section>
 

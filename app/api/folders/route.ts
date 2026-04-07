@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getVisibleFolderIdSet } from "@/lib/folderAccess";
 
 type CreateFolderBody = {
   name?: string;
@@ -21,15 +22,19 @@ export async function GET(req: Request) {
   const parentIdParam = searchParams.get("parentId");
   const parentId = parentIdParam ? parentIdParam.trim() : null;
 
+  let allowedFolderIds: string[] | null = null;
+  if (role !== "ADMIN") {
+    const visibleIds = await getVisibleFolderIdSet(userId);
+    allowedFolderIds = Array.from(visibleIds);
+  }
+
   const where = {
     parentId,
     ...(role === "ADMIN"
       ? {}
       : {
-          folderAccess: {
-            some: {
-              userId,
-            },
+          id: {
+            in: allowedFolderIds ?? [],
           },
         }),
   };

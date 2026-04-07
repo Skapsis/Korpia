@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { DashboardCard } from "@/components/folder/DashboardCard";
+import { getVisibleRootFoldersForUser } from "@/lib/folderAccess";
 
 export default async function DashboardEntryPage() {
   const session = await auth();
@@ -16,19 +17,12 @@ export default async function DashboardEntryPage() {
 
   const isAdmin = userRole === "ADMIN";
 
-  const rootFolders = await prisma.folder.findMany({
-    where: isAdmin
-      ? { parentId: null }
-      : {
-          parentId: null,
-          folderAccess: {
-            some: {
-              userId,
-            },
-          },
-        },
-    orderBy: { order: "asc" },
-  });
+  const rootFolders = isAdmin
+    ? await prisma.folder.findMany({
+        where: { parentId: null },
+        orderBy: { order: "asc" },
+      })
+    : await getVisibleRootFoldersForUser(userId);
 
   const currentUser = await prisma.user.findUnique({
     where: { id: userId },

@@ -3,6 +3,10 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
+function normalizeRole(value: unknown): "ADMIN" | "USER" {
+  return typeof value === "string" && value.toUpperCase() === "ADMIN" ? "ADMIN" : "USER";
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
@@ -36,8 +40,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: user.id,
           name: user.name ?? undefined,
           email: user.email,
-          role: user.role,
-          mustChangePassword: user.mustChangePassword,
+          role: normalizeRole(user.role),
+          mustChangePassword: user.mustChangePassword === true,
         };
       },
     }),
@@ -46,7 +50,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as { role?: string }).role;
+        token.role = normalizeRole((user as { role?: string }).role);
         token.mustChangePassword = (user as { mustChangePassword?: boolean }).mustChangePassword;
       }
 
@@ -62,9 +66,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         (session.user as { id?: string }).id = token.id as string;
-        (session.user as { role?: string }).role = token.role as string;
+        (session.user as { role?: string }).role = normalizeRole(token.role);
         (session.user as { mustChangePassword?: boolean }).mustChangePassword =
-          Boolean(token.mustChangePassword);
+          token.mustChangePassword === true;
       }
       return session;
     },

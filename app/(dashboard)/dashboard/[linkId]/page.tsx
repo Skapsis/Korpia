@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { SupersetDashboard } from "@/components/dashboard/SupersetDashboard";
 import { FavoriteButton } from "@/components/dashboard/FavoriteButton";
+import { getVisibleFolderIdSet } from "@/lib/folderAccess";
 
 type PageProps = {
   params: Promise<{ linkId: string }>;
@@ -35,15 +36,8 @@ export default async function DashboardDetailPage({ params }: PageProps) {
   }
 
   if (role !== "ADMIN") {
-    const hasFolderAccess = await prisma.folderAccess.findFirst({
-      where: {
-        userId,
-        folderId: dashboard.folderId,
-      },
-      select: { id: true },
-    });
-
-    if (!hasFolderAccess) {
+    const visibleFolderIds = await getVisibleFolderIdSet(userId);
+    if (!visibleFolderIds.has(dashboard.folderId)) {
       redirect("/folder");
     }
   }
@@ -69,7 +63,7 @@ export default async function DashboardDetailPage({ params }: PageProps) {
             className="flex w-fit items-center gap-1 text-sm text-zinc-500 transition hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           >
             <ArrowLeft className="h-4 w-4" />
-            Volver a {dashboard.folder.name}
+            Volver a {dashboard.folder?.name ?? "la carpeta"}
           </Link>
 
           <div className="flex items-center gap-2">

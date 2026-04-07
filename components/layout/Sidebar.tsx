@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Folder, LayoutDashboard, LogOut, Settings, User } from "lucide-react";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { logoutAction } from "@/app/actions/logout";
+import { getVisibleRootFoldersForUser } from "@/lib/folderAccess";
 
 export async function Sidebar() {
   const session = await auth();
@@ -10,19 +12,16 @@ export async function Sidebar() {
   const role = typeof session?.user?.role === "string" ? session.user.role : undefined;
   const isAdmin = role === "ADMIN";
 
-  const folders = await prisma.folder.findMany({
-    where: isAdmin
-      ? { parentId: null }
-      : {
-          parentId: null,
-          folderAccess: {
-            some: {
-              userId,
-            },
-          },
-        },
-    orderBy: { order: "asc" },
-  });
+  if (!userId) {
+    redirect("/login");
+  }
+
+  const folders = isAdmin
+    ? await prisma.folder.findMany({
+        where: { parentId: null },
+        orderBy: { order: "asc" },
+      })
+    : await getVisibleRootFoldersForUser(userId);
 
   const userDisplayName =
     (typeof session?.user?.name === "string" && session.user.name.trim().length > 0

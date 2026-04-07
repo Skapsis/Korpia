@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { embedDashboard } from "@superset-ui/embedded-sdk";
 import { BarChart4, Loader2 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { resolveSupersetEmbedDashboardId } from "@/lib/supersetEmbed";
 
 /** Suele ser `dashboard.url` desde Prisma: UUID o URL que contenga el UUID. */
@@ -21,8 +22,57 @@ type GuestTokenApiResponse = {
   error?: string;
 };
 
+type LayerKey = "A" | "B";
+
+type LayerMeta = {
+  dashboardId: string | null;
+  theme: "light" | "dark" | null;
+};
+
 function isValidDashboardId(value: string): boolean {
   return value.trim().length > 0;
+}
+
+function parseJwtExpMs(token: string): number | null {
+  const parts = token.split(".");
+  if (parts.length < 2) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))) as {
+      exp?: number;
+    };
+    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+async function waitForIframeReady(mountPoint: HTMLDivElement, timeoutMs = 20000): Promise<void> {
+  const iframe = mountPoint.querySelector("iframe");
+  if (!iframe) {
+    return;
+  }
+
+  if (iframe.dataset.loaded === "true") {
+    return;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new Error("Tiempo de espera agotado al cargar iframe de Superset"));
+    }, timeoutMs);
+
+    const onLoad = () => {
+      iframe.dataset.loaded = "true";
+      window.clearTimeout(timer);
+      iframe.removeEventListener("load", onLoad);
+      resolve();
+    };
+
+    iframe.addEventListener("load", onLoad, { once: true });
+  });
 }
 
 function DashboardPlaceholder() {
@@ -54,10 +104,29 @@ function MissingSupersetUrlMessage() {
 }
 
 export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
-  const mountPointRef = useRef<HTMLDivElement>(null);
-  const embeddedRef = useRef<EmbeddedDashboardInstance | null>(null);
+  const mountARef = useRef<HTMLDivElement>(null);
+  const mountBRef = useRef<HTMLDivElement>(null);
+  const instancesRef = useRef<Record<LayerKey, EmbeddedDashboardInstance | null>>({
+    A: null,
+    B: null,
+  });
+  const layerMetaRef = useRef<Record<LayerKey, LayerMeta>>({
+    A: { dashboardId: null, theme: null },
+    B: { dashboardId: null, theme: null },
+  });
+  const tokenCacheRef = useRef<{ token: string | null; expMs: number | null; dashboardId: string | null }>({
+    token: null,
+    expMs: null,
+    dashboardId: null,
+  });
+  const tokenRequestRef = useRef<Promise<string> | null>(null);
+  const loadSequenceRef = useRef(0);
+  const { resolvedTheme } = useTheme();
+  const [activeLayer, setActiveLayer] = useState<LayerKey>("A");
+  const [transitioningLayer, setTransitioningLayer] = useState<LayerKey | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const embedDashboardId = useMemo(
     () => resolveSupersetEmbedDashboardId(dashboardId),
@@ -67,57 +136,160 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
   const supersetPublicUrl = process.env.NEXT_PUBLIC_SUPERSET_URL?.trim() ?? "";
   const supersetDomain = supersetPublicUrl.replace(/\/$/, "");
   const hasSupersetUrl = supersetDomain.length > 0;
+  const effectiveTheme = resolvedTheme === "dark" ? "dark" : "light";
+  const activeMeta = layerMetaRef.current[activeLayer];
+  const hasVisibleDashboard = Boolean(instancesRef.current[activeLayer]);
 
   useEffect(() => {
-    if (!hasSupersetUrl || !validDashboardId || !mountPointRef.current) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      (["A", "B"] as LayerKey[]).forEach((layer) => {
+        instancesRef.current[layer]?.unmount?.();
+        instancesRef.current[layer]?.destroy?.();
+        instancesRef.current[layer] = null;
+        const mountPoint = layer === "A" ? mountARef.current : mountBRef.current;
+        if (mountPoint) {
+          mountPoint.innerHTML = "";
+        }
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || !hasSupersetUrl || !validDashboardId) {
       setLoading(false);
       return;
     }
 
+    const activeMount = activeLayer === "A" ? mountARef.current : mountBRef.current;
+    const nextLayer: LayerKey = activeLayer === "A" ? "B" : "A";
+    const nextMount = nextLayer === "A" ? mountARef.current : mountBRef.current;
+    if (!activeMount || !nextMount) {
+      return;
+    }
+
+    const isInitialLoad = !instancesRef.current[activeLayer];
+    const activeLayerMatches =
+      activeMeta.dashboardId === embedDashboardId && activeMeta.theme === effectiveTheme;
+
+    if (!isInitialLoad && activeLayerMatches) {
+      return;
+    }
+
+    const sequence = ++loadSequenceRef.current;
     let cancelled = false;
 
-    const loadDashboard = async () => {
-      setLoading(true);
-      setError(null);
+    const getGuestToken = async () => {
+      const now = Date.now();
+      const cached = tokenCacheRef.current;
+      if (
+        cached.token &&
+        cached.dashboardId === embedDashboardId &&
+        cached.expMs &&
+        cached.expMs > now + 30_000
+      ) {
+        return cached.token;
+      }
 
-      mountPointRef.current!.innerHTML = "";
+      if (tokenRequestRef.current) {
+        return tokenRequestRef.current;
+      }
+
+      tokenRequestRef.current = (async () => {
+        const response = await fetch("/api/superset/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dashboardId: embedDashboardId }),
+        });
+
+        const data = (await response.json()) as GuestTokenApiResponse;
+        if (!response.ok) {
+          throw new Error(data.error ?? "No se pudo obtener el guest token");
+        }
+
+        const token = data.guestToken ?? data.token;
+        if (!token) {
+          throw new Error("La API no devolvió token de Superset");
+        }
+
+        tokenCacheRef.current = {
+          token,
+          expMs: parseJwtExpMs(token),
+          dashboardId: embedDashboardId,
+        };
+        return token;
+      })();
 
       try {
-        const instance = (await embedDashboard({
+        return await tokenRequestRef.current;
+      } finally {
+        tokenRequestRef.current = null;
+      }
+    };
+
+    const loadDashboard = async (targetLayer: LayerKey, targetMount: HTMLDivElement) => {
+      setError(null);
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setTransitioningLayer(targetLayer);
+      }
+
+      targetMount.innerHTML = "";
+      instancesRef.current[targetLayer]?.unmount?.();
+      instancesRef.current[targetLayer]?.destroy?.();
+      instancesRef.current[targetLayer] = null;
+
+      let instance: EmbeddedDashboardInstance | null = null;
+      try {
+        instance = (await embedDashboard({
           id: embedDashboardId,
           supersetDomain,
-          mountPoint: mountPointRef.current as HTMLDivElement,
-          fetchGuestToken: async () => {
-            const response = await fetch("/api/superset/token", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ dashboardId: embedDashboardId }),
-            });
-
-            const data = (await response.json()) as GuestTokenApiResponse;
-            if (!response.ok) {
-              throw new Error(data.error ?? "No se pudo obtener el guest token");
-            }
-
-            const token = data.guestToken ?? data.token;
-            if (!token) {
-              throw new Error("La API no devolvió token de Superset");
-            }
-
-            return token;
-          },
+          mountPoint: targetMount,
+          fetchGuestToken: getGuestToken,
           dashboardUiConfig: {
             hideTitle: true,
             hideChartControls: false,
           },
         })) as EmbeddedDashboardInstance;
 
-        if (!cancelled) {
-          embeddedRef.current = instance;
+        await waitForIframeReady(targetMount);
+
+        if (cancelled || loadSequenceRef.current !== sequence) {
+          instance.unmount?.();
+          instance.destroy?.();
+          return;
         }
+
+        const previousLayer = activeLayer;
+        instancesRef.current[targetLayer] = instance;
+        layerMetaRef.current[targetLayer] = {
+          dashboardId: embedDashboardId,
+          theme: effectiveTheme,
+        };
+
+        setActiveLayer(targetLayer);
+        setTransitioningLayer(null);
+
+        window.setTimeout(() => {
+          instancesRef.current[previousLayer]?.unmount?.();
+          instancesRef.current[previousLayer]?.destroy?.();
+          instancesRef.current[previousLayer] = null;
+          layerMetaRef.current[previousLayer] = { dashboardId: null, theme: null };
+          const previousMount = previousLayer === "A" ? mountARef.current : mountBRef.current;
+          if (previousMount) {
+            previousMount.innerHTML = "";
+          }
+        }, 220);
       } catch (embedError) {
+        instance?.unmount?.();
+        instance?.destroy?.();
         if (!cancelled) {
           setError(embedError instanceof Error ? embedError.message : "Error cargando dashboard");
+          setTransitioningLayer(null);
         }
       } finally {
         if (!cancelled) {
@@ -126,18 +298,26 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
       }
     };
 
-    loadDashboard();
+    if (isInitialLoad) {
+      void loadDashboard(activeLayer, activeMount);
+    } else {
+      void loadDashboard(nextLayer, nextMount);
+    }
 
     return () => {
       cancelled = true;
-      embeddedRef.current?.unmount?.();
-      embeddedRef.current?.destroy?.();
-      embeddedRef.current = null;
-      if (mountPointRef.current) {
-        mountPointRef.current.innerHTML = "";
-      }
     };
-  }, [embedDashboardId, validDashboardId, hasSupersetUrl, supersetDomain]);
+  }, [
+    embedDashboardId,
+    validDashboardId,
+    hasSupersetUrl,
+    supersetDomain,
+    effectiveTheme,
+    mounted,
+    activeLayer,
+    activeMeta.dashboardId,
+    activeMeta.theme,
+  ]);
 
   if (!validDashboardId) {
     return <DashboardPlaceholder />;
@@ -149,7 +329,7 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
 
   return (
     <div className="relative w-full h-full min-h-[600px]">
-      {loading && (
+      {loading && !hasVisibleDashboard && (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/70 backdrop-blur-sm dark:bg-zinc-900/70">
           <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -157,16 +337,36 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
           </div>
         </div>
       )}
+      {transitioningLayer ? (
+        <div className="absolute right-3 top-3 z-20 rounded-full bg-zinc-900/80 px-3 py-1 text-xs text-white dark:bg-zinc-100/90 dark:text-zinc-900">
+          Sincronizando tema...
+        </div>
+      ) : null}
 
       {error ? (
         <div className="flex min-h-[600px] w-full items-center justify-center rounded-2xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-900/40 dark:bg-red-950/20">
           <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
         </div>
       ) : (
-        <div
-          ref={mountPointRef}
-          className="h-full min-h-[600px] w-full [&>iframe]:h-full [&>iframe]:w-full [&>iframe]:border-none"
-        />
+        <>
+          <div
+            data-theme={effectiveTheme}
+            className={`absolute inset-0 h-full min-h-[600px] w-full rounded-2xl bg-white transition-opacity duration-200 dark:bg-zinc-900 [&>iframe]:h-full [&>iframe]:w-full [&>iframe]:border-none ${
+              activeLayer === "A" ? "z-10 opacity-100" : "z-0 opacity-0"
+            }`}
+          >
+            <div ref={mountARef} className="h-full min-h-[600px] w-full" />
+          </div>
+          <div
+            data-theme={effectiveTheme}
+            className={`absolute inset-0 h-full min-h-[600px] w-full rounded-2xl bg-white transition-opacity duration-200 dark:bg-zinc-900 [&>iframe]:h-full [&>iframe]:w-full [&>iframe]:border-none ${
+              activeLayer === "B" ? "z-10 opacity-100" : "z-0 opacity-0"
+            }`}
+          >
+            <div ref={mountBRef} className="h-full min-h-[600px] w-full" />
+          </div>
+          <div className="h-full min-h-[600px] w-full" />
+        </>
       )}
     </div>
   );

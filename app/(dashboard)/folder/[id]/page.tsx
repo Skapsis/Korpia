@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import Link from "next/link";
 import { ChevronRight, Folder, LayoutDashboard } from "lucide-react";
 import { DashboardCard } from "@/components/folder/DashboardCard";
+import { getVisibleFolderIdSet } from "@/lib/folderAccess";
 
 export default async function FolderPage({
   params,
@@ -24,6 +25,7 @@ export default async function FolderPage({
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const showOnlyFavorites = resolvedSearchParams?.favorites === "1";
+  const visibleFolderIds = !isAdmin ? await getVisibleFolderIdSet(userId) : null;
 
   const folder = await prisma.folder.findUnique({
     where: { id },
@@ -33,10 +35,8 @@ export default async function FolderPage({
         where: isAdmin
           ? {}
           : {
-              folderAccess: {
-                some: {
-                  userId,
-                },
+              id: {
+                in: Array.from(visibleFolderIds ?? []),
               },
             },
         orderBy: { order: "asc" },
@@ -48,18 +48,8 @@ export default async function FolderPage({
     notFound();
   }
 
-  if (!isAdmin) {
-    const hasFolderAccess = await prisma.folderAccess.findFirst({
-      where: {
-        userId,
-        folderId: folder.id,
-      },
-      select: { id: true },
-    });
-
-    if (!hasFolderAccess) {
+  if (!isAdmin && !visibleFolderIds?.has(folder.id)) {
       redirect("/folder");
-    }
   }
 
   const userWithFavorites = await prisma.user.findUnique({
