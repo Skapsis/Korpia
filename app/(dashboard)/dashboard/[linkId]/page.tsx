@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { SupersetDashboard } from "@/components/dashboard/SupersetDashboard";
+import { FavoriteButton } from "@/components/dashboard/FavoriteButton";
 
 type PageProps = {
   params: Promise<{ linkId: string }>;
@@ -47,6 +48,18 @@ export default async function DashboardDetailPage({ params }: PageProps) {
     }
   }
 
+  const favoriteRecord = await prisma.user.findFirst({
+    where: {
+      id: userId,
+      favoriteDashboards: {
+        some: {
+          id: dashboard.id,
+        },
+      },
+    },
+    select: { id: true },
+  });
+
   return (
     <div className="flex h-full min-h-screen flex-col">
       <header className="shrink-0 border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -59,7 +72,12 @@ export default async function DashboardDetailPage({ params }: PageProps) {
             Volver a {dashboard.folder.name}
           </Link>
 
-          <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{dashboard.title}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+              {dashboard.title}
+            </h1>
+            <FavoriteButton dashboardId={dashboard.id} initialIsFavorite={Boolean(favoriteRecord)} />
+          </div>
 
           {dashboard.description ? (
             <p className="text-sm text-zinc-500 dark:text-zinc-400">{dashboard.description}</p>

@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import type { Prisma } from "@prisma/client";
-import { Folder, LayoutDashboard, Plus, Trash2 } from "lucide-react";
+import { ChevronRight, Folder, LayoutDashboard, Plus, Trash2 } from "lucide-react";
 import { createFolder, deleteFolder } from "@/app/actions/folder";
 import { createDashboardLink, deleteDashboardLink } from "@/app/actions/dashboard";
 import type { ActionState } from "@/app/actions/user";
@@ -26,6 +26,7 @@ export function FolderManager({ folders }: FolderManagerProps) {
   const [deleteFolderState, deleteFolderAction] = useActionState(deleteFolder, INITIAL_STATE);
   const [createDashState, createDashAction] = useActionState(createDashboardLink, INITIAL_STATE);
   const [deleteDashState, deleteDashAction] = useActionState(deleteDashboardLink, INITIAL_STATE);
+  const [currentParentId, setCurrentParentId] = useState<string | null>(null);
 
   const feedback =
     createFolderState.error ||
@@ -37,6 +38,31 @@ export function FolderManager({ folders }: FolderManagerProps) {
     createDashState.message ||
     deleteDashState.message;
 
+  const currentLevelFolders = useMemo(
+    () => folders.filter((folder) => folder.parentId === currentParentId),
+    [folders, currentParentId]
+  );
+
+  const folderById = useMemo(() => new Map(folders.map((folder) => [folder.id, folder])), [folders]);
+
+  const breadcrumbChain = useMemo(() => {
+    if (!currentParentId) {
+      return [];
+    }
+
+    const chain: FolderWithDashboards[] = [];
+    let cursor: string | null = currentParentId;
+    while (cursor) {
+      const node = folderById.get(cursor);
+      if (!node) {
+        break;
+      }
+      chain.unshift(node);
+      cursor = node.parentId;
+    }
+    return chain;
+  }, [currentParentId, folderById]);
+
   return (
     <div className="space-y-6">
       {feedback && (
@@ -45,8 +71,35 @@ export function FolderManager({ folders }: FolderManagerProps) {
         </div>
       )}
 
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          Navegación de carpetas
+        </p>
+        <div className="flex flex-wrap items-center gap-1 text-sm text-zinc-600 dark:text-zinc-300">
+          <button
+            type="button"
+            onClick={() => setCurrentParentId(null)}
+            className="rounded px-2 py-1 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Raíz
+          </button>
+          {breadcrumbChain.map((folder) => (
+            <div key={folder.id} className="flex items-center gap-1">
+              <ChevronRight className="h-3.5 w-3.5 text-zinc-400" />
+              <button
+                type="button"
+                onClick={() => setCurrentParentId(folder.id)}
+                className="rounded px-2 py-1 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                {folder.name}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="space-y-4">
-        {folders.map((folder) => (
+        {currentLevelFolders.map((folder) => (
           <div
             key={folder.id}
             className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
@@ -66,14 +119,24 @@ export function FolderManager({ folders }: FolderManagerProps) {
                 action={deleteFolderAction}
                 onSubmit={(e) => !confirm("¿Seguro?") && e.preventDefault()}
               >
-                <input type="hidden" name="folderId" value={folder.id} />
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Eliminar carpeta
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentParentId(folder.id)}
+                    className="inline-flex items-center gap-1 rounded-lg bg-zinc-100 px-2.5 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                  >
+                    <Folder className="h-3.5 w-3.5" />
+                    Entrar
+                  </button>
+                  <input type="hidden" name="folderId" value={folder.id} />
+                  <button
+                    type="submit"
+                    className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Eliminar carpeta
+                  </button>
+                </div>
               </form>
             </div>
 
@@ -168,9 +231,10 @@ export function FolderManager({ folders }: FolderManagerProps) {
 
       <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
         <h3 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-100">
-          Crear nueva carpeta
+          Crear nueva carpeta {currentParentId ? "en esta ubicación" : "raíz"}
         </h3>
         <form action={createFolderAction} className="grid gap-2 sm:grid-cols-3">
+          <input type="hidden" name="parentId" value={currentParentId ?? ""} />
           <input
             name="name"
             required

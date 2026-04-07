@@ -12,8 +12,9 @@ export async function Sidebar() {
 
   const folders = await prisma.folder.findMany({
     where: isAdmin
-      ? {}
+      ? { parentId: null }
       : {
+          parentId: null,
           folderAccess: {
             some: {
               userId,

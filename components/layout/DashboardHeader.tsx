@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ChevronDown, User } from "lucide-react";
 import { auth } from "@/auth";
 import ThemeToggle from "@/components/layout/ThemeToggle";
-import { HeaderDatePicker } from "@/components/layout/HeaderDatePicker";
 
 function userInitial(name: string | null | undefined, email: string | null | undefined): string {
   if (name && name.trim().length > 0) {
@@ -29,7 +28,6 @@ export async function DashboardHeader() {
     <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-end border-b border-zinc-200 bg-white/95 px-4 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/95 sm:px-6">
       <div className="flex items-center gap-4">
         <ThemeToggle />
-        <HeaderDatePicker />
 
         <details className="group relative">
           <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full py-1 pl-1 pr-2 transition hover:bg-zinc-100 dark:hover:bg-zinc-800 [&::-webkit-details-marker]:hidden">

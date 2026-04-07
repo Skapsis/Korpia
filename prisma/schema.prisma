@@ -12,10 +12,12 @@ model User {
   email         String         @unique
   name          String?
   password      String
+  mustChangePassword Boolean   @default(true)
   role          String         @default("USER")
   groupId       String?
   group         Group?         @relation(fields: [groupId], references: [id], onDelete: SetNull)
   folderAccess  FolderAccess[]
+  favoriteDashboards DashboardLink[] @relation("UserFavoriteDashboards")
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -49,10 +51,15 @@ model Folder {
   name           String
   description    String?
   order          Int             @default(0)
+  parentId       String?
+  parent         Folder?         @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children       Folder[]        @relation("FolderHierarchy")
   folderAccess   FolderAccess[]
   dashboardLinks DashboardLink[]
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+
+  @@index([parentId])
 }
 
 model FolderAccess {
@@ -81,6 +88,7 @@ model DashboardLink {
   kpiTrend             String?  // Ej: "+15%"
   folder               Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
   groupDashboardAccess GroupDashboardAccess[]
+  favoritedBy          User[]                 @relation("UserFavoriteDashboards")
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
