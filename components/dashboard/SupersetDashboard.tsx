@@ -55,6 +55,12 @@ async function waitForIframeReady(mountPoint: HTMLDivElement, timeoutMs = 20000)
     return;
   }
 
+  iframe.setAttribute("width", "100%");
+  iframe.setAttribute("height", "100%");
+  iframe.style.width = "100%";
+  iframe.style.height = "100%";
+  iframe.style.backgroundColor = "transparent";
+
   if (iframe.dataset.loaded === "true") {
     return;
   }
@@ -250,6 +256,11 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
           supersetDomain,
           mountPoint: targetMount,
           fetchGuestToken: getGuestToken,
+          // Pass explicit theme hints so Superset can render dark internals (filters, panels).
+          urlParams: {
+            theme: effectiveTheme,
+            superset_theme: effectiveTheme,
+          },
           dashboardUiConfig: {
             hideTitle: true,
             hideChartControls: false,
@@ -328,7 +339,7 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
   }
 
   return (
-    <div className="relative w-full h-full min-h-[600px]">
+    <div className="relative flex h-full min-h-[calc(100vh-9rem)] w-full flex-1">
       {loading && !hasVisibleDashboard && (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/70 backdrop-blur-sm dark:bg-zinc-900/70">
           <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
@@ -351,21 +362,27 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
         <>
           <div
             data-theme={effectiveTheme}
-            className={`absolute inset-0 h-full min-h-[600px] w-full rounded-2xl bg-white transition-opacity duration-200 dark:bg-zinc-900 [&>iframe]:h-full [&>iframe]:w-full [&>iframe]:border-none ${
+            className={`absolute inset-0 h-full w-full rounded-2xl bg-white transition-opacity duration-200 dark:bg-zinc-900 [&>iframe]:h-full [&>iframe]:w-full [&>iframe]:border-none ${
               activeLayer === "A" ? "z-10 opacity-100" : "z-0 opacity-0"
             }`}
           >
-            <div ref={mountARef} className="h-full min-h-[600px] w-full" />
+            <div
+              ref={mountARef}
+              className="h-full w-full [--superset-bg:#ffffff] dark:[--superset-bg:#18181b]"
+            />
           </div>
           <div
             data-theme={effectiveTheme}
-            className={`absolute inset-0 h-full min-h-[600px] w-full rounded-2xl bg-white transition-opacity duration-200 dark:bg-zinc-900 [&>iframe]:h-full [&>iframe]:w-full [&>iframe]:border-none ${
+            className={`absolute inset-0 h-full w-full rounded-2xl bg-white transition-opacity duration-200 dark:bg-zinc-900 [&>iframe]:h-full [&>iframe]:w-full [&>iframe]:border-none ${
               activeLayer === "B" ? "z-10 opacity-100" : "z-0 opacity-0"
             }`}
           >
-            <div ref={mountBRef} className="h-full min-h-[600px] w-full" />
+            <div
+              ref={mountBRef}
+              className="h-full w-full [--superset-bg:#ffffff] dark:[--superset-bg:#18181b]"
+            />
           </div>
-          <div className="h-full min-h-[600px] w-full" />
+          <div className="h-full w-full" />
         </>
       )}
     </div>

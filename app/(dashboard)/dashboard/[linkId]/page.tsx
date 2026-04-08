@@ -55,7 +55,7 @@ export default async function DashboardDetailPage({ params }: PageProps) {
   });
 
   return (
-    <div className="flex h-full min-h-screen flex-col">
+    <div className="flex h-full min-h-0 flex-1 flex-col">
       <header className="shrink-0 border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex flex-col gap-3">
           <Link
@@ -79,7 +79,7 @@ export default async function DashboardDetailPage({ params }: PageProps) {
         </div>
       </header>
 
-      <main className="min-h-0 flex-1 p-0">
+      <main className="min-h-0 flex-1 overflow-hidden p-0">
         <SupersetDashboard dashboardId={dashboard.url} />
       </main>
     </div>
