@@ -123,11 +123,13 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
   const tokenRequestRef = useRef<Promise<string> | null>(null);
   const loadSequenceRef = useRef(0);
   const loadTimeoutRef = useRef<number | null>(null);
+  const hasLoadedSuccessfully = useRef(false);
   const { resolvedTheme } = useTheme();
   const [activeLayer, setActiveLayer] = useState<LayerKey>("A");
   const [transitioningLayer, setTransitioningLayer] = useState<LayerKey | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSlowLoading, setIsSlowLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   const embedDashboardId = useMemo(
@@ -238,6 +240,7 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
 
     const loadDashboard = async (targetLayer: LayerKey, targetMount: HTMLDivElement) => {
       setError(null);
+      setIsSlowLoading(false);
       if (isInitialLoad) {
         setLoading(true);
       } else {
@@ -255,12 +258,12 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
         loadTimeoutRef.current = null;
       }
       try {
-        const timeoutPromise = new Promise<never>((_, reject) => {
+        if (!hasLoadedSuccessfully.current) {
           const timeoutId = window.setTimeout(() => {
-            reject(new Error("Tiempo de espera agotado al cargar iframe de Superset (90 segundos)."));
+            setIsSlowLoading(true);
           }, 90000);
           loadTimeoutRef.current = timeoutId;
-        });
+        }
 
         instance = (await embedDashboard({
           id: embedDashboardId,
@@ -278,7 +281,7 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
           },
         })) as EmbeddedDashboardInstance;
 
-        await Promise.race([waitForIframeReady(targetMount), timeoutPromise]);
+        await waitForIframeReady(targetMount);
         if (loadTimeoutRef.current !== null) {
           window.clearTimeout(loadTimeoutRef.current);
           loadTimeoutRef.current = null;
@@ -296,9 +299,11 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
           dashboardId: embedDashboardId,
           theme: effectiveTheme,
         };
+        hasLoadedSuccessfully.current = true;
 
         setActiveLayer(targetLayer);
         setTransitioningLayer(null);
+        setIsSlowLoading(false);
 
         window.setTimeout(() => {
           instancesRef.current[previousLayer]?.unmount?.();
@@ -372,9 +377,16 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
           <div className="flex flex-col items-center gap-2 text-center text-zinc-600 dark:text-zinc-300">
             <Loader2 className="h-5 w-5 animate-spin" />
             <p className="text-sm font-medium">Cargando dashboard...</p>
-            <p className="max-w-md text-xs text-zinc-500 dark:text-zinc-400">
-              Procesando grandes volúmenes de datos, esto puede tomar más de un minuto...
-            </p>
+            {isSlowLoading ? (
+              <p className="max-w-md text-xs text-amber-600 dark:text-amber-300">
+                El servidor está tardando más de lo habitual, por favor espera un momento o refresca
+                la página.
+              </p>
+            ) : (
+              <p className="max-w-md text-xs text-zinc-500 dark:text-zinc-400">
+                Procesando grandes volúmenes de datos, esto puede tomar más de un minuto...
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -385,10 +397,11 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
       ) : null}
 
       {error ? (
-        <div className="flex min-h-[600px] w-full items-center justify-center rounded-2xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-900/40 dark:bg-red-950/20">
+        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl border border-red-200 bg-red-50/95 p-6 text-center dark:border-red-900/40 dark:bg-red-950/80">
           <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
         </div>
-      ) : (
+      ) : null}
+      {
         <>
           <div
             data-theme={effectiveTheme}
@@ -414,7 +427,7 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
           </div>
           <div className="h-full w-full" />
         </>
-      )}
+      }
     </div>
   );
 }
