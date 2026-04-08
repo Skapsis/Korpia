@@ -99,7 +99,6 @@ export async function setUserFolderAccess(
               isDenied: true,
             })),
           ],
-          skipDuplicates: true,
         });
       }
     });
