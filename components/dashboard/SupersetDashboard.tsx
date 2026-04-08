@@ -49,7 +49,7 @@ function parseJwtExpMs(token: string): number | null {
   }
 }
 
-async function waitForIframeReady(mountPoint: HTMLDivElement, timeoutMs = 90000): Promise<void> {
+async function waitForIframeReady(mountPoint: HTMLDivElement): Promise<void> {
   const iframe = mountPoint.querySelector("iframe");
   if (!iframe) {
     return;
@@ -65,16 +65,9 @@ async function waitForIframeReady(mountPoint: HTMLDivElement, timeoutMs = 90000)
     return;
   }
 
-  await new Promise<void>((resolve, reject) => {
-    const timer = window.setTimeout(() => {
-      reject(
-        new Error("Tiempo de espera agotado al cargar iframe de Superset (90 segundos).")
-      );
-    }, timeoutMs);
-
+  await new Promise<void>((resolve) => {
     const onLoad = () => {
       iframe.dataset.loaded = "true";
-      window.clearTimeout(timer);
       iframe.removeEventListener("load", onLoad);
       resolve();
     };
@@ -129,6 +122,7 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
   });
   const tokenRequestRef = useRef<Promise<string> | null>(null);
   const loadSequenceRef = useRef(0);
+  const loadTimeoutRef = useRef<number | null>(null);
   const { resolvedTheme } = useTheme();
   const [activeLayer, setActiveLayer] = useState<LayerKey>("A");
   const [transitioningLayer, setTransitioningLayer] = useState<LayerKey | null>(null);
@@ -154,6 +148,10 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
 
   useEffect(() => {
     return () => {
+      if (loadTimeoutRef.current !== null) {
+        window.clearTimeout(loadTimeoutRef.current);
+        loadTimeoutRef.current = null;
+      }
       (["A", "B"] as LayerKey[]).forEach((layer) => {
         instancesRef.current[layer]?.unmount?.();
         instancesRef.current[layer]?.destroy?.();
@@ -252,7 +250,18 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
       instancesRef.current[targetLayer] = null;
 
       let instance: EmbeddedDashboardInstance | null = null;
+      if (loadTimeoutRef.current !== null) {
+        window.clearTimeout(loadTimeoutRef.current);
+        loadTimeoutRef.current = null;
+      }
       try {
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          const timeoutId = window.setTimeout(() => {
+            reject(new Error("Tiempo de espera agotado al cargar iframe de Superset (90 segundos)."));
+          }, 90000);
+          loadTimeoutRef.current = timeoutId;
+        });
+
         instance = (await embedDashboard({
           id: embedDashboardId,
           supersetDomain,
@@ -269,7 +278,11 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
           },
         })) as EmbeddedDashboardInstance;
 
-        await waitForIframeReady(targetMount);
+        await Promise.race([waitForIframeReady(targetMount), timeoutPromise]);
+        if (loadTimeoutRef.current !== null) {
+          window.clearTimeout(loadTimeoutRef.current);
+          loadTimeoutRef.current = null;
+        }
 
         if (cancelled || loadSequenceRef.current !== sequence) {
           instance.unmount?.();
@@ -298,6 +311,10 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
           }
         }, 220);
       } catch (embedError) {
+        if (loadTimeoutRef.current !== null) {
+          window.clearTimeout(loadTimeoutRef.current);
+          loadTimeoutRef.current = null;
+        }
         instance?.unmount?.();
         instance?.destroy?.();
         if (!cancelled) {
@@ -305,6 +322,10 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
           setTransitioningLayer(null);
         }
       } finally {
+        if (loadTimeoutRef.current !== null) {
+          window.clearTimeout(loadTimeoutRef.current);
+          loadTimeoutRef.current = null;
+        }
         if (!cancelled) {
           setLoading(false);
         }
@@ -319,6 +340,10 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
 
     return () => {
       cancelled = true;
+      if (loadTimeoutRef.current !== null) {
+        window.clearTimeout(loadTimeoutRef.current);
+        loadTimeoutRef.current = null;
+      }
     };
   }, [
     embedDashboardId,
