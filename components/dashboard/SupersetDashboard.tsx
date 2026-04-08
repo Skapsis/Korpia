@@ -49,7 +49,7 @@ function parseJwtExpMs(token: string): number | null {
   }
 }
 
-async function waitForIframeReady(mountPoint: HTMLDivElement, timeoutMs = 20000): Promise<void> {
+async function waitForIframeReady(mountPoint: HTMLDivElement, timeoutMs = 90000): Promise<void> {
   const iframe = mountPoint.querySelector("iframe");
   if (!iframe) {
     return;
@@ -67,7 +67,9 @@ async function waitForIframeReady(mountPoint: HTMLDivElement, timeoutMs = 20000)
 
   await new Promise<void>((resolve, reject) => {
     const timer = window.setTimeout(() => {
-      reject(new Error("Tiempo de espera agotado al cargar iframe de Superset"));
+      reject(
+        new Error("Tiempo de espera agotado al cargar iframe de Superset (90 segundos).")
+      );
     }, timeoutMs);
 
     const onLoad = () => {
@@ -342,9 +344,12 @@ export function SupersetDashboard({ dashboardId }: SupersetDashboardProps) {
     <div className="relative flex h-full min-h-[calc(100vh-9rem)] w-full flex-1">
       {loading && !hasVisibleDashboard && (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/70 backdrop-blur-sm dark:bg-zinc-900/70">
-          <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
+          <div className="flex flex-col items-center gap-2 text-center text-zinc-600 dark:text-zinc-300">
             <Loader2 className="h-5 w-5 animate-spin" />
-            Cargando dashboard...
+            <p className="text-sm font-medium">Cargando dashboard...</p>
+            <p className="max-w-md text-xs text-zinc-500 dark:text-zinc-400">
+              Procesando grandes volúmenes de datos, esto puede tomar más de un minuto...
+            </p>
           </div>
         </div>
       )}
