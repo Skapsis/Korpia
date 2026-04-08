@@ -36,12 +36,12 @@ export async function POST(req: Request) {
 
     const rlsRules: RlsRule[] = [];
     if (userRole !== "ADMIN") {
-      // Use a configurable column to avoid hardcoding SQL Server schema details.
-      const rlsColumn = process.env.SUPERSET_RLS_COLUMN?.trim() || "email";
-      const safeIdentifier = rlsColumn.replace(/[^a-zA-Z0-9_]/g, "");
-      const safeEmail = userEmail.replace(/'/g, "''");
-      rlsRules.push({ clause: `${safeIdentifier} = '${safeEmail}'` });
-      // TODO: if your dataset uses a non-email identity (e.g. vendedor_id), adjust value source too.
+      // RLS disabled temporarily to validate dashboard loading with real SQL Server schema.
+      // TODO: Re-enable this with the real column name in your dataset (e.g. vendedor_id, usuario).
+      // const rlsColumn = process.env.SUPERSET_RLS_COLUMN?.trim() || "email";
+      // const safeIdentifier = rlsColumn.replace(/[^a-zA-Z0-9_]/g, "");
+      // const safeEmail = userEmail.replace(/'/g, "''");
+      // rlsRules.push({ clause: `${safeIdentifier} = '${safeEmail}'` });
     }
 
     const supersetUrl = process.env.SUPERSET_URL?.trim();
